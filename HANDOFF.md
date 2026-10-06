@@ -2,14 +2,17 @@
 
 ## Whose turn is it?
 
-**Next turn: Turn 2 - Jaivin** (folder `~/cricket-project/project-friend`)
+**Next turn: Turn 3 - Apurva** (folder `~/cricket-project/project-me`)
 
 | Turn | Person | Package | Status |
 |------|--------|---------|--------|
 | 1 | Apurva | Scaffolding, interface spec, core of `pose/` | done (2026-10-06) |
-| 2 | Jaivin | `generation/` environment, model choice, smoke test | **next** |
-| 3 | Apurva | Finish Milestone 1 | waiting |
+| 2 | Jaivin | `generation/` environment, model choice, smoke test | partly done (2026-10-06), rest deferred to Turn 4 |
+| 3 | Apurva | Finish Milestone 1 | **next** |
 | 4 | Jaivin | Finish Milestone 2 | waiting |
+
+**Milestone 2 is partially done and deferred.** Full write-up:
+`docs/m2-status.md`.
 
 ## Turn 1 - Apurva - done
 
@@ -26,34 +29,50 @@
 - Checked end to end on an openly licensed placeholder clip (`data/README.md`):
   person found in 154 of the first 200 frames, joints land on the batter.
 
-## Next: Turn 2 - Jaivin
+## Turn 2 - Jaivin - partly done, stopped early for the presentation
 
-Package, from `CLAUDE.md`:
+Done:
 
-- Set up `generation/` (its own venv at `generation/.venv`, `requirements.txt`).
-- Verify PyTorch MPS works.
-- Choose a pre-trained open-source image-to-video model that realistically runs
-  in 16 GB on Apple Silicon (the proposal suggests LTX-2 or MagicAnimate; check
-  what actually runs, quantized or reduced variant if needed).
-- Download weights into an ignored folder and run a tiny smoke test, logging
-  memory use.
+- Python 3.12 installed with Homebrew (`/opt/homebrew/bin/python3.12`).
+  `generation/.venv`, pinned `generation/requirements.txt`.
+- PyTorch MPS verified, including half precision (`generation.check_env`).
+- Model chosen: AnimateDiff v3 + SparseCtrl RGB on Stable Diffusion 1.5 via
+  `diffusers` (reasons in `generation/README.md`). Weights, 4.6 GB, in the
+  git-ignored `generation/models/`.
+- Smoke test with memory logging (`generation.smoke_test`), component check
+  (`generation.check_components`), 7 tests in `tests/test_generation_memlog.py`.
 
-Things worth knowing:
+Not done:
 
-- This Mac has only the system Python 3.9.6 (`/usr/bin/python3`); no Homebrew
-  Python, no `uv`. Recent PyTorch / diffusers releases may need a newer Python,
-  so installing one is probably the first step.
-- `.gitignore` already covers `models/`, `weights/`, `checkpoints/`, `.cache/`,
-  `*.safetensors`, `*.ckpt`, `*.pt`, `*.pth`, `*.bin`, `*.gguf`, `outputs/` and
-  any `.venv/`.
-- `generation/` can read pose files with plain NumPy; see "Reading a file" in
-  `docs/interface.md`. Pose conditioning itself is Milestone 3, not Turn 2.
-- `ffmpeg` is installed at `/opt/homebrew/bin/ffmpeg`.
+- No usable clip yet. With 8 frames, frame 0 matches the input and the rest are
+  abstract patterns. With 16 frames the clip is coherent but took 16 minutes
+  while swapping, a repeat ran out of memory, and the clip does not keep the
+  input image's look.
+- Nothing above 256x256 has been run.
 
-## After that: Turn 3 - Apurva
+## Next: Turn 3 - Apurva
 
 Normalize and smooth pose sequences, skeleton-overlay video, crop to the player,
 isolate the delivery stride / action segment, more tests and docs.
+
+Unaffected by the Milestone 2 problems; `generation/` does not read pose files yet.
+
+## After that: Turn 4 - Jaivin
+
+Finish Milestone 2, starting with the deferred items (detail in
+`docs/m2-status.md`, "Next steps"):
+
+1. Rerun 16 frames with `--attention-slicing` and other apps closed; record a
+   clean time and memory peak.
+2. Confirm the cause of the broken short clips (16 frames at 8 steps, 8 frames
+   at 20 steps).
+3. Try a real, openly licensed player photograph as input and check the clip
+   keeps its appearance.
+4. Go to 384 then 512 pixels; add CPU offloading or chunked decoding if needed.
+5. Add `--device` to the smoke test and make a Colab/Kaggle notebook for the
+   512x512, 3-5 second runs.
+6. Make the smoke test's checks fail on a broken clip.
+7. Results in `docs/m2-results.md`.
 
 ## Blockers and open questions
 
@@ -65,5 +84,11 @@ isolate the delivery stride / action segment, more tests and docs.
   (`pose/README.md`, "Version pin").
 - The proposal mentions three students and an NVIDIA GPU; we are two people on
   one Apple Silicon Mac, so Part 3 (era filters, evaluation) is unassigned.
+- **Milestone 2 has no usable output yet** and 16 frames at 256x256 is already
+  at the memory limit of the MacBook. 512x512 for 3-5 seconds will probably
+  need Colab/Kaggle.
+- The tests in `tests/test_generation_memlog.py` are skipped under `pose/.venv`
+  (no psutil there). Run them with `generation/.venv/bin/python -m pytest`.
+- The AnimateDiff repositories on Hugging Face declare no licence.
 - `setup-test-apurva.txt` and `setup-test-jaivin.txt` are leftovers from the
   repo setup and can be deleted once both of us agree.
