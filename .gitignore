@@ -1,0 +1,44 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Model weights (downloaded locally, never committed)
+models/
+weights/
+checkpoints/
+*.task
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.gguf
+*.onnx
+*.mlpackage/
+.cache/
+
+# Videos and test footage
+data/*
+!data/README.md
+*.mp4
+*.mov
+*.webm
+*.avi
+*.mkv
+*.ogv
+*.gif
+
+# Generated outputs
+outputs/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
