@@ -67,4 +67,7 @@ running in decides who the current person is.
 - Run everything from the repo root:
   - tests: `pose/.venv/bin/python -m pytest tests -q`
   - extract: `pose/.venv/bin/python -m pose.extract <video> --action <label>`
+  - generation tests: `generation/.venv/bin/python -m pytest tests/test_generation_memlog.py -q`
+  - generation smoke test: `generation/.venv/bin/python -m generation.smoke_test`
+    (setup and status: `generation/README.md`, `docs/m2-status.md`)
 - Weights, videos, `outputs/` and venvs are git-ignored; never commit them.
