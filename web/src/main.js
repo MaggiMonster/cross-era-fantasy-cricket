@@ -165,7 +165,7 @@ async function start() {
       const t = path.crease.t + clock;
       placeBall(sampleAt(path.points, t));
       batter.setSwing(result.shot, Math.min((t - path.crease.t + SWING.lead) / SWING.time, 1));
-      if (result.outcome === "stumped") striker.knock(Math.min(clock / 0.3, 1));
+      if (result.outcome === "stumped" || result.outcome === "bowled") striker.knock(Math.min(clock / 0.3, 1));
       if (clock > 1.25) finishBall();
     } else if (phase === "hit") {
       const { hit, result } = ballView;

@@ -3,7 +3,7 @@ import pytest
 
 from duel.batting import OUTCOMES, PRESSURES, SHOTS, WICKET_MASK
 from duel.matchup import MATCHUPS, Matchup, load_matchup
-from duel.types import Length, Line, MatchState, Outcome, Pressure, Shot, ShotType
+from duel.types import Length, Line, MatchState, Outcome, OutcomeType, Pressure, Shot, ShotType
 
 
 @pytest.fixture(scope="module", params=MATCHUPS, ids=lambda m: f"{m[0]}-{m[1]}")
@@ -23,7 +23,9 @@ def test_probabilities_valid_everywhere(duel):
             for shot in SHOTS:
                 p = np.array(list(duel.outcome_probs(delivery, Shot(shot), pressure).values()))
                 assert p.sum() == pytest.approx(1)
-                assert (p > 0).all()
+                assert (p >= 0).all()
+                if shot is not ShotType.LEAVE:
+                    assert (p > 0).all()
 
 
 def test_average_bowler_returns_the_batter(duel):
@@ -35,6 +37,28 @@ def test_average_bowler_returns_the_batter(duel):
     average.bowler = type("Average", (), {"outcome_probs": lambda self, d, p: dict(zip(OUTCOMES, base.tolist()))})()
     got = list(average.outcome_probs(delivery, shot, pressure).values())
     assert got == pytest.approx(list(duel.batter.outcome_probs(delivery, shot, pressure).values()))
+
+
+def test_leaving_straight_balls_is_risky(duel):
+    from duel.types import Delivery
+
+    def out(length, line, pressure):
+        probs = duel.outcome_probs(Delivery(duel.bowler.bowl_type, length, line), Shot(ShotType.LEAVE), pressure)
+        return sum(v for o, v in probs.items() if o.is_wicket)
+
+    for pressure in PRESSURES:
+        for length in (Length.YORKER, Length.FULL, Length.GOOD):
+            assert out(length, Line.STUMPS, pressure) > 5 * out(length, Line.OUTSIDE_OFF, pressure)
+            assert out(length, Line.OUTSIDE_OFF, pressure) > out(length, Line.LEG, pressure)
+        assert out(Length.FULL, Line.STUMPS, pressure) > out(Length.GOOD, Line.STUMPS, pressure) > out(Length.BOUNCER, Line.STUMPS, pressure)
+
+
+def test_a_leave_cannot_score_or_be_caught(duel):
+    for delivery in all_deliveries(duel):
+        for pressure in PRESSURES:
+            probs = duel.outcome_probs(delivery, Shot(ShotType.LEAVE), pressure)
+            assert sum(v for o, v in probs.items() if o.runs > 0) == 0
+            assert probs[OutcomeType.CAUGHT] == 0 and probs[OutcomeType.RUN_OUT] == 0
 
 
 def test_better_bowler_raises_wicket_risk(duel):

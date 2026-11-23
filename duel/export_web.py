@@ -12,7 +12,7 @@ from pathlib import Path
 from duel.batting import BOWL_TYPES, LENGTHS, LINES, OUTCOMES, PRESSURES, SHOTS, _vector, load_batter
 from duel.bowling import baseline_table, load_bowler
 from duel.cricsheet import BATTERS, BATTING_COUNTS, BOWLERS
-from duel.matchup import MATCHUPS
+from duel.matchup import LEAVE_RISK, LEAVE_SKILL_LIMITS, MATCHUPS
 from duel.types import PRESSURE_HIGH_RATE, PRESSURE_MEDIUM_RATE, SCHEMA_VERSION
 
 WEB_NETWORKS = Path(__file__).resolve().parent.parent / "web" / "public" / "data" / "networks.json"
@@ -60,6 +60,7 @@ def build_export() -> dict:
             "bowler.line": ["length", "line"],
             "bowler.outcome": ["pressure", "length", "line", "outcome"],
             "baseline": ["pressure", "bowl_type", "length", "line", "outcome"],
+            "leave_risk": ["line", "length"],
         },
         "pressure_rates": {"medium": PRESSURE_MEDIUM_RATE, "high": PRESSURE_HIGH_RATE},
         "wickets": [o.value for o in OUTCOMES if o.is_wicket],
@@ -67,6 +68,8 @@ def build_export() -> dict:
         "batters": batters,
         "bowlers": bowlers,
         "baseline": _flat(baseline_table()),
+        "leave_risk": _flat(LEAVE_RISK),
+        "leave_skill_limits": list(LEAVE_SKILL_LIMITS),
     }
 
 

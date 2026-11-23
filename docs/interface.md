@@ -1,6 +1,6 @@
 # Interface: how the batting and bowling halves connect
 
-- **Schema version:** `1.4`
+- **Schema version:** `1.5`
 - **Reference implementation:** `duel/types.py`
 - Change this file only together with `duel/types.py`, and bump `SCHEMA_VERSION`.
 
@@ -68,7 +68,8 @@ delivery of the other type.
 ## Matchup model (done, `duel/matchup.py`)
 
 Provides `P(Outcome | Delivery, Shot, Pressure, batter, bowler)`. The method is in
-`docs/assumptions.md`, section "Combining batter and bowler".
+`docs/assumptions.md`, section "Combining batter and bowler". A leave is then adjusted by
+line and length, as described in the section "Leaving the ball".
 
 ```python
 from duel.matchup import load_matchup

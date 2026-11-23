@@ -12,13 +12,13 @@ short chase that stops at the target, so its rates are not expected to equal a c
 ## Tendulkar vs Bumrah
 
 - Target: **22** from 18 balls.
-- Batter wins **32.9%** of duels (95% margin 2.9 points).
-- Average duel: 18.1 runs, 17.0 balls, 0.77 lives lost.
-- Endings: out of balls 61.3%, target reached 32.9%, out of lives 5.8%.
+- Batter wins **32.8%** of duels (95% margin 2.9 points).
+- Average duel: 18.1 runs, 17.1 balls, 0.77 lives lost.
+- Endings: out of balls 61.5%, target reached 32.8%, out of lives 5.7%.
 
 | Per ball | Runs | Wicket | Boundary | Dot |
 |---|---|---|---|---|
-| **Simulated duel** (17036 balls) | 1.065 | 4.52% | 14.0% | 40.8% |
+| **Simulated duel** (17062 balls) | 1.063 | 4.53% | 14.0% | 40.9% |
 | **Expected from real records (log5)** | 1.102 | 5.03% | 15.0% | 39.1% |
 | Tendulkar real, IPL | 1.198 | 3.34% | 16.7% | 36.7% |
 | Bumrah real, IPL | 1.166 | 5.40% | 14.7% | 36.9% |
@@ -27,18 +27,18 @@ short chase that stops at the target, so its rates are not expected to equal a c
 
 **Check:** Outside the two players' real IPL rates: runs (below both), boundaries (below both), dots (above both). A matchup can correctly fall outside both when both players are on the same side of the IPL average.
 
-**Against the log5 expectation:** simulated runs per ball differ by -0.038.
+**Against the log5 expectation:** simulated runs per ball differ by -0.040.
 
 ## Kohli vs Warne
 
 - Target: **25** from 18 balls.
-- Batter wins **33.9%** of duels (95% margin 2.9 points).
+- Batter wins **33.8%** of duels (95% margin 2.9 points).
 - Average duel: 21.2 runs, 17.0 balls, 0.78 lives lost.
-- Endings: out of balls 60.5%, target reached 33.9%, out of lives 5.6%.
+- Endings: out of balls 60.6%, target reached 33.8%, out of lives 5.6%.
 
 | Per ball | Runs | Wicket | Boundary | Dot |
 |---|---|---|---|---|
-| **Simulated duel** (16969 balls) | 1.247 | 4.60% | 12.6% | 26.5% |
+| **Simulated duel** (16975 balls) | 1.246 | 4.61% | 12.6% | 26.6% |
 | **Expected from real records (log5)** | 1.210 | 5.16% | 12.2% | 27.6% |
 | Kohli real, IPL | 1.348 | 3.31% | 16.8% | 29.3% |
 | Warne real, IPL | 1.179 | 4.86% | 12.3% | 32.2% |
@@ -47,7 +47,7 @@ short chase that stops at the target, so its rates are not expected to equal a c
 
 **Check:** Outside the two players' real IPL rates: dots (below both). A matchup can correctly fall outside both when both players are on the same side of the IPL average.
 
-**Against the log5 expectation:** simulated runs per ball differ by +0.037.
+**Against the log5 expectation:** simulated runs per ball differ by +0.036.
 
 ## Bowlers faced most, for checking labels
 

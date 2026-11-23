@@ -93,7 +93,40 @@ export class Networks {
     const base = this.slice(this.data.baseline, axes.baseline, [p, b, l, m]);
     const raw = bat.map((v, i) => (v * bowl[i]) / base[i]);
     const sum = raw.reduce((x, y) => x + y, 0);
-    return raw.map((v) => v / sum);
+    const probs = raw.map((v) => v / sum);
+    return shot === "leave" ? this.leaveProbs(batter, delivery, pressure, probs, bowl, base) : probs;
+  }
+
+  wicketProb(probs) {
+    return this.states.outcome.reduce((total, o, i) => total + (this.wickets.has(o) ? probs[i] : 0), 0);
+  }
+
+  /** A leave cannot score or be caught. Its risk depends on line and length. */
+  leaveProbs(batter, delivery, pressure, p, bowl, base) {
+    const { states, data } = this;
+    const p_ = this.idx("pressure", pressure);
+    const b = this.idx("bowl_type", delivery.bowl_type);
+    const l = this.idx("length", delivery.length);
+    const m = this.idx("line", delivery.line);
+    const shots = this.shotProbs(batter, delivery, pressure);
+    let batterWicket = 0;
+    shots.forEach((weight, s) => {
+      batterWicket += weight * this.wicketProb(this.slice(data.batters[batter].outcome, data.axes["batter.outcome"], [p_, s, b, l]));
+    });
+    const baseWicket = this.wicketProb(base);
+    const [low, high] = data.leave_skill_limits;
+    const skill = Math.min(Math.max((batterWicket / baseWicket) * this.wicketProb(bowl) / baseWicket, low), high);
+    const prior = data.leave_risk[m * this.n.length + l];
+    const odds = (prior / (1 - prior)) * skill;
+    const risk = odds / (1 + odds);
+    const [dot, bowled, lbw, stumped] = ["dot", "bowled", "lbw", "stumped"].map((o) => this.idx("outcome", o));
+    const share = p[bowled] / (p[bowled] + p[lbw]);
+    const result = new Array(states.outcome.length).fill(0);
+    result[bowled] = risk * share;
+    result[lbw] = risk * (1 - share);
+    result[stumped] = p[stumped];
+    result[dot] = 1 - risk - p[stumped];
+    return result;
   }
 }
 
