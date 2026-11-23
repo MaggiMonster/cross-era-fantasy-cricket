@@ -19,12 +19,15 @@ short chase that stops at the target, so its rates are not expected to equal a c
 | Per ball | Runs | Wicket | Boundary | Dot |
 |---|---|---|---|---|
 | **Simulated duel** (17036 balls) | 1.065 | 4.52% | 14.0% | 40.8% |
+| **Expected from real records (log5)** | 1.102 | 5.03% | 15.0% | 39.1% |
 | Tendulkar real, IPL | 1.198 | 3.34% | 16.7% | 36.7% |
 | Bumrah real, IPL | 1.166 | 5.40% | 14.7% | 36.9% |
 | Tendulkar real, Tests | 0.541 | 1.02% | 6.9% | 71.1% |
 | Bumrah real, Tests | 0.441 | 2.35% | 5.8% | 76.6% |
 
-**Check:** Outside the two players' real IPL rates: runs (below both), boundaries (below both), dots (above both).
+**Check:** Outside the two players' real IPL rates: runs (below both), boundaries (below both), dots (above both). A matchup can correctly fall outside both when both players are on the same side of the IPL average.
+
+**Against the log5 expectation:** simulated runs per ball differ by -0.038.
 
 ## Kohli vs Warne
 
@@ -36,12 +39,15 @@ short chase that stops at the target, so its rates are not expected to equal a c
 | Per ball | Runs | Wicket | Boundary | Dot |
 |---|---|---|---|---|
 | **Simulated duel** (16969 balls) | 1.247 | 4.60% | 12.6% | 26.5% |
+| **Expected from real records (log5)** | 1.210 | 5.16% | 12.2% | 27.6% |
 | Kohli real, IPL | 1.348 | 3.31% | 16.8% | 29.3% |
 | Warne real, IPL | 1.179 | 4.86% | 12.3% | 32.2% |
 | Kohli real, Tests | 0.556 | 1.18% | 6.4% | 68.7% |
 | Warne real, Tests | 0.494 | 2.13% | 5.8% | 72.2% |
 
-**Check:** Outside the two players' real IPL rates: dots (below both).
+**Check:** Outside the two players' real IPL rates: dots (below both). A matchup can correctly fall outside both when both players are on the same side of the IPL average.
+
+**Against the log5 expectation:** simulated runs per ball differ by +0.037.
 
 ## Bowlers faced most, for checking labels
 

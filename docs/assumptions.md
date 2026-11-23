@@ -153,3 +153,26 @@ bowler is labelled:
     `web/src/sim/ball.js` are **priors** chosen to look plausible. Bumrah is about 142
     km/h and Warne about 81 km/h. None are measured from the players.
 40. **Direction after the bat is a placeholder** until Turn 7.
+
+## Tendulkar scoring-rate review (Turn 5)
+
+41. **His batting priors were reviewed and not changed.** The duel's 1.065 runs per ball
+    looked too slow beside his real IPL 1.198, but that comparison ignores the opponent.
+    Tendulkar (1.198) and Bumrah (1.166 conceded) are both below the IPL population
+    average of 1.333, so a fair matchup should fall below both players.
+42. **Evidence.** Log5 of the real rates alone, with no line, length or shot priors, at
+    the duel's pressure mix gives 1.102 runs per ball. The model's exact expected value
+    is 1.086, which is 0.017 lower, or about 0.3 runs over 18 balls. The 1000-duel sample
+    reads 0.038 lower because it also includes random variation. Kohli vs Warne is 0.037
+    above its expectation, so the priors do not lean one way against batters in general.
+    Raising Tendulkar's rates to match 1.198 would make him better than his record.
+43. **What changed.** `docs/validation.md` now shows the log5 expectation for each matchup.
+
+## Character animation (Turn 5)
+
+44. **Batting animations are hand-authored keyframes**, not motion capture of the real
+    players. Poses in `pipeline/build_batter.py` are **priors** based on general batting
+    technique. Sachin's compact stance and short backlift and Kohli's high backlift are
+    stylised impressions and are not measured from footage.
+45. **Animation is presentation only.** Controls and clips choose how a shot looks and
+    never change the probabilities.

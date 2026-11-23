@@ -13,7 +13,9 @@ from pathlib import Path
 
 import numpy as np
 
+from duel import batting, bowling
 from duel.batting import OUTCOMES, _vector
+from duel.career import load_career_stats
 from duel.cricsheet import BALLS_CSV, BATTING_COUNTS, BOWLING_COUNTS, PLAYERS
 from duel.engine import Duel, default_target
 from duel.matchup import MATCHUPS, load_matchup
@@ -42,15 +44,36 @@ def rates(tally: np.ndarray) -> dict[str, float]:
     }
 
 
+def expected_rates(batter: str, bowler: str, pressure_balls: Counter) -> dict[str, float]:
+    """Log5 of the two players' real rates against the population, at the duel's pressure mix.
+
+    This uses no line, length or shot priors, so it shows what the real records alone imply.
+    """
+    counts = json.loads(BATTING_COUNTS.read_text())["players"]
+    data = bowling._load_counts()
+    career = load_career_stats()
+    bat = batting.observed_rates(batter, counts, career)
+    bowl = bowling.observed_rates(bowler, data, career)
+    population = bowling.population_rates(data)
+    total = sum(pressure_balls.values())
+    mixed = np.zeros(len(OUTCOMES))
+    for pressure, balls in pressure_balls.items():
+        p = bat[pressure] * bowl[pressure] / population[pressure]
+        mixed += balls / total * p / p.sum()
+    return rates(mixed)
+
+
 def simulate(batter: str, bowler: str, duels: int = DUELS, seed: int = SEED) -> dict:
     matchup = load_matchup(batter, bowler)
     seeds = np.random.SeedSequence(seed).spawn(duels)
     tally = np.zeros(len(OUTCOMES))
     runs, wins, balls, wickets = [], 0, [], []
     endings: Counter[str] = Counter()
+    pressure_balls: Counter = Counter()
     for s in seeds:
         game = Duel(matchup, seed=s)
         while not game.state.is_over:
+            pressure_balls[game.state.pressure] += 1
             result = game.play()
             tally[OUTCOMES.index(result.outcome.kind)] += 1
         state = game.state
@@ -69,6 +92,7 @@ def simulate(batter: str, bowler: str, duels: int = DUELS, seed: int = SEED) -> 
         "mean_wickets": float(np.mean(wickets)),
         "endings": endings,
         "rates": rates(tally),
+        "expected": expected_rates(batter, bowler, pressure_balls),
         "balls": int(tally.sum()),
     }
 
@@ -135,12 +159,15 @@ def report(results: dict, bowlers: dict) -> str:
             "| Per ball | Runs | Wicket | Boundary | Dot |",
             "|---|---|---|---|---|",
             _row(f"**Simulated duel** ({r['balls']} balls)", r["rates"]),
+            _row("**Expected from real records (log5)**", r["expected"]),
             _row(f"{NAMES[batter]} real, IPL", bat_ipl),
             _row(f"{NAMES[bowler]} real, IPL", bowl_ipl),
             _row(f"{NAMES[batter]} real, Tests", bat_test),
             _row(f"{NAMES[bowler]} real, Tests", bowl_test),
             "",
-            f"**Check:** {check}",
+            f"**Check:** {check} A matchup can correctly fall outside both when both players are on the same side of the IPL average.",
+            "",
+            f"**Against the log5 expectation:** simulated runs per ball differ by {r['rates']['runs_per_ball'] - r['expected']['runs_per_ball']:+.3f}.",
             "",
         ]
     lines += [
