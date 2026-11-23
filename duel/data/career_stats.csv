@@ -1,0 +1,7 @@
+player,format,stat,value,as_of,source
+tendulkar,tests,matches,200,2013-11-15,https://en.wikipedia.org/wiki/Sachin_Tendulkar
+tendulkar,tests,runs,15921,2013-11-15,https://en.wikipedia.org/wiki/Sachin_Tendulkar
+tendulkar,tests,average,53.78,2013-11-15,https://en.wikipedia.org/wiki/Sachin_Tendulkar
+kohli,tests,matches,123,2026-11-04,https://en.wikipedia.org/wiki/Virat_Kohli
+kohli,tests,runs,9230,2026-11-04,https://en.wikipedia.org/wiki/Virat_Kohli
+kohli,tests,average,46.85,2026-11-04,https://en.wikipedia.org/wiki/Virat_Kohli

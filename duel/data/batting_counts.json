@@ -1,0 +1,139 @@
+{
+ "source": "Cricsheet (cricsheet.org), CC BY 4.0; aggregated into outcome counts",
+ "players": {
+  "tendulkar": {
+   "tests": {
+    "all": {
+     "1": 1974,
+     "2": 433,
+     "3": 73,
+     "4": 794,
+     "6": 30,
+     "bowled": 26,
+     "caught": 60,
+     "dot": 8442,
+     "lbw": 31,
+     "run_out": 3,
+     "stumped": 1
+    }
+   },
+   "ipl": {
+    "all": {
+     "1": 720,
+     "2": 117,
+     "3": 7,
+     "4": 296,
+     "6": 29,
+     "bowled": 12,
+     "caught": 38,
+     "dot": 714,
+     "lbw": 8,
+     "run_out": 4,
+     "stumped": 3
+    },
+    "high": {
+     "1": 41,
+     "2": 4,
+     "4": 16,
+     "6": 4,
+     "caught": 5,
+     "dot": 23,
+     "lbw": 1
+    },
+    "low": {
+     "1": 116,
+     "2": 20,
+     "3": 2,
+     "4": 31,
+     "6": 4,
+     "bowled": 1,
+     "caught": 7,
+     "dot": 117
+    },
+    "medium": {
+     "1": 207,
+     "2": 31,
+     "3": 1,
+     "4": 87,
+     "6": 5,
+     "bowled": 3,
+     "caught": 6,
+     "dot": 196,
+     "lbw": 1,
+     "run_out": 2,
+     "stumped": 1
+    }
+   }
+  },
+  "kohli": {
+   "tests": {
+    "all": {
+     "1": 3128,
+     "2": 648,
+     "3": 168,
+     "4": 1030,
+     "6": 30,
+     "bowled": 16,
+     "caught": 135,
+     "dot": 11408,
+     "lbw": 41,
+     "run_out": 3,
+     "stumped": 1
+    }
+   },
+   "ipl": {
+    "all": {
+     "1": 2980,
+     "2": 502,
+     "3": 21,
+     "4": 846,
+     "6": 317,
+     "bowled": 43,
+     "caught": 162,
+     "dot": 2031,
+     "lbw": 12,
+     "run_out": 7,
+     "stumped": 5
+    },
+    "high": {
+     "1": 404,
+     "2": 91,
+     "3": 2,
+     "4": 142,
+     "6": 51,
+     "bowled": 12,
+     "caught": 35,
+     "dot": 272,
+     "lbw": 2,
+     "stumped": 1
+    },
+    "low": {
+     "1": 323,
+     "2": 36,
+     "3": 3,
+     "4": 88,
+     "6": 28,
+     "bowled": 4,
+     "caught": 11,
+     "dot": 218,
+     "lbw": 1,
+     "run_out": 2,
+     "stumped": 1
+    },
+    "medium": {
+     "1": 595,
+     "2": 97,
+     "3": 8,
+     "4": 194,
+     "6": 66,
+     "bowled": 5,
+     "caught": 22,
+     "dot": 475,
+     "lbw": 3,
+     "run_out": 1,
+     "stumped": 1
+    }
+   }
+  }
+ }
+}
