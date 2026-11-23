@@ -2,8 +2,8 @@
 
 ## Whose turn is it?
 
-**Next turn: Turn 6 - Jaivin** (folder `~/cricket-project/project-friend`).
-Turn 5 is closed with faces pending. They will be built for all four players together.
+**Current turn: Turn 6 - Jaivin** (folder `~/cricket-project/project-friend`), still open.
+Everything is built except the Bumrah and Warne photos, which Jaivin is downloading, and the faces.
 
 The plan changed on 2026-11-23 to a 3D browser game in Three.js. The Bayesian networks,
 match engine and Pygame game stay as a working fallback. The older video-generation
@@ -16,7 +16,7 @@ handoff is in `archive/docs/HANDOFF-old-scope.md`.
 | 3 | Apurva | Match engine, Pygame screen, batting controls, pace-vs-spin adjustment | done (2026-11-23) |
 | 4 | Jaivin | Three.js scaffold, ball physics, JS sampler, capsule players, validation, asset research | done (2026-11-23) |
 | 5 | Apurva | Character pipeline, Sachin and Kohli, eight batting shots, 3D batting controls | done (2026-11-23), faces pending |
-| 6 | Jaivin | Bumrah and Warne, bowling actions and controls, auto mode, character select | **next** |
+| 6 | Jaivin | Bumrah and Warne, bowling actions and controls, auto mode, character select | **in progress**, photos and faces pending |
 | 7 | Apurva | Shot direction and distance, fielders, replays, camera cuts, final docs, demo | planned |
 
 ## Earlier turns
@@ -78,21 +78,29 @@ copyrighted match footage.
   and any demo showing the faces out of public places.
 - Schema is now `1.7` for the player API. No shared types changed.
 
-## Next: Turn 6 - Jaivin
+## Turn 6 - Jaivin - in progress
 
-1. Run `git pull`, then `cd web && npm install`.
-2. Collect 6 to 8 photos each of Bumrah and Warne in `~/cricket-project/assets/photos/bumrah/`
-   and `warne/`, and log them in `SOURCES.md`. Wikimedia rate-limits fast automated downloads,
-   so go slowly or save them in a browser.
-3. Build Bumrah and Warne on the MPFB pipeline, reusing `pipeline/build_batter.py`.
-4. Add their bowling actions from the signature specs in `docs/asset-pipeline.md`.
-5. Add bowling controls, auto mode and the character-select menu.
+- `pipeline/build_bowler.py` builds Bumrah and Warne on the MPFB pipeline, with scripted run-ups
+  and deliveries. Their files are in `~/cricket-project/assets/`, not in git.
+- **Human bowling:** keys 1-5 pick length, arrows pick line, Enter or Space bowls. The batting
+  and outcome networks still decide every ball.
+- **Auto mode** and a **start menu** with character select, mode, overs and lives. Portraits are
+  rendered from the 3D heads, so they update when real faces arrive.
+- Release heights now match the models' reach (`docs/assumptions.md`, items 57 to 60).
+- A full one-over bowling duel was played with real key presses in headless Chrome.
+- Schema is now `1.8` for the browser API. No shared types changed.
 
-**Faces, once all four photo sets exist:** install FaceBuilder, export one test head to `.glb`,
-then build all four inside the 15-day trial. Do not start the trial before then.
+## Next: finish Turn 6 - Jaivin
+
+1. Jaivin saves 6 to 8 photos each to `~/cricket-project/assets/photos/bumrah/` and `warne/`,
+   following the checklist in `docs/asset-pipeline.md`, and logs each one in `SOURCES.md`.
+2. With all four photo sets ready, install FaceBuilder, export one test head to `.glb`, then build
+   all four inside the 15-day trial. Do not start the trial before then.
+3. Close Turn 6 and hand over to Apurva for Turn 7.
 
 ## Blockers and open questions
 
+- **Bowling actions need a person's judgement** at real speed on the Mac.
 - **Faces are placeholders** until FaceBuilder is installed. Its glTF export and Blender 5.3
   support are not yet tested. The 15-day trial covers all four heads.
 - **Shot quality still needs a person's judgement.** The blade reaches within 12 cm of the ball
