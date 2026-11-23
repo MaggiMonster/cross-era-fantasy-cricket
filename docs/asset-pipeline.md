@@ -169,11 +169,16 @@ animations/<source>/<player>.glb       one clip per action on our rig
 characters/<player>.glb                body, kit, bat and rig
 ```
 
-- Rebuild: `blender --background --factory-startup --python pipeline/build_batter.py -- tendulkar kohli`.
+- Install the free MPFB extension once: `blender --online-mode --command extension install --sync --enable mpfb`.
+- Rebuild: `blender --background --python pipeline/build_batter.py -- tendulkar kohli`. Do not
+  add `--factory-startup`, because it disables MPFB.
+- Bodies use MPFB 2.0.18 and its `game_engine` rig, with fingers. MPFB's code is GPL. A 2025
+  CGChannel article says content made with it is CC0, which we did not confirm on MPFB's own pages.
 - `<action>` is one of `idle`, `leave`, `defend`, `work`, `drive`, `cut`, `pull`, `sweep`,
   `loft`, `bumrah_delivery`, `warne_delivery`.
 - Swing clips are 30 fps and 1.0 s long, with bat contact at 0.4 s.
-- Pick a source with `?motion=scripted` (default). Review a pose with `?pose=drive:0.4`.
+- Pick a source with `?motion=scripted` (default). Review a pose with `?pose=drive:0.4`, or
+  play from beside the batter with `?closeup=1`.
 - The `Head` mesh is separate from `Body`, so a FaceBuilder head can replace it.
 
 ## Signature touches

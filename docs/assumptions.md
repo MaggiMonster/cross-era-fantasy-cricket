@@ -194,3 +194,14 @@ bowler is labelled:
 49. **A leave cannot score or be caught or run out.** Stumped keeps its log5 probability.
 50. **Limitation.** Line is where the ball is heading in simple terms. A leg-break pitching
     on leg that turns to hit off is not modelled separately.
+
+## Batting animation upgrade (Turn 5)
+
+51. **Bodies are generic MPFB humans** shaped by a **prior** height and build for each player.
+    They are not likenesses. Faces still need FaceBuilder.
+52. **The bat is steered to the ball at run time** with footwork (up to 24 cm across the crease),
+    the hands (up to 55 cm) and the wrists (up to 48 degrees). These limits are **priors**.
+53. **Measured contact.** Over 7 shots, 15 deliveries and both matchups, the blade comes
+    within 12 cm of the ball in 183 of 210 cases. Most other cases are poor shot choices for
+    the ball, such as a pull to a yorker, where the worst gap is 58 cm.
+54. **This is presentation only.** Steering never changes the probabilities.
