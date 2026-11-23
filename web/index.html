@@ -38,7 +38,34 @@
     #banner-detail { margin: 6px 0 16px; }
     #again { padding: 10px 20px; text-transform: none; font-weight: 700; }
     #error { position: fixed; inset: auto 16px 16px; background: #7f1d1d; padding: 12px; border-radius: 6px; }
+    #bowling { display: grid; gap: 4px; width: 100%; background: var(--panel); padding: 6px; border-radius: 8px; }
+    #bowling[hidden], #shots[hidden] { display: none; }
+    #bowling.locked { opacity: .45; pointer-events: none; }
+    .bowl-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+    #bowl-lines { grid-template-columns: repeat(3, 1fr) 1.4fr; }
+    #bowling button.active, #menu button.active { background: var(--accent); color: #111827; }
+    #bowling button.active kbd { color: #111827; }
+    #menu { position: fixed; inset: 0; z-index: 5; overflow: auto; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; padding: 16px; background: radial-gradient(circle at 50% 20%, #17345a, #0a1628 70%); }
+    #menu-box > *, #menu-players > *, #menu-options > *, #menu-modes > * { min-width: 0; }
+    #menu[hidden] { display: none; }
+    #menu-box { width: min(860px, 100%); display: grid; gap: 16px; }
+    #menu h1 { margin: 0; font-size: clamp(28px, 5vw, 44px); line-height: 1.05; }
+    #menu h2 { margin: 0 0 6px; font-size: 13px; color: var(--muted); font-weight: 600; }
+    #menu-players { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .card { display: grid; justify-items: center; gap: 3px; padding: 10px 6px; text-transform: none; border: 2px solid transparent; }
+    #menu .card.active { background: #1e3a5f; color: var(--ink); border-color: var(--accent); }
+    .card small { color: var(--muted); }
+    .face { width: min(128px, 100%); aspect-ratio: 1; border-radius: 6px; display: grid; place-items: center; font-size: 38px; font-weight: 900; background-size: cover; background-position: center; }
+    #menu-options { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
+    #menu-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+    #menu-modes button { text-transform: none; padding: 9px 2px; }
+    #menu select { width: 100%; font: inherit; color: var(--ink); background: #1e3a5f; border: 0; border-radius: 5px; padding: 9px 6px; }
+    #menu-start { padding: 13px; font-size: 17px; font-weight: 800; text-transform: none; background: var(--accent); color: #111827; }
+    #menu-start:hover { background: #fcd34d; }
     @media (max-width: 680px) {
+      #menu-players { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #menu-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #menu-options > :first-child { grid-column: 1 / -1; }
       #shots { grid-template-columns: repeat(4, 1fr); }
       #matchups { top: 96px; left: 16px; right: auto; }
       #score { font-size: 22px; padding: 8px 10px; }
@@ -58,13 +85,33 @@
   <nav id="matchups" aria-label="Matchup">
     <a data-matchup="tendulkar-bumrah" href="?matchup=tendulkar-bumrah">Sachin v Bumrah</a>
     <a data-matchup="kohli-warne" href="?matchup=kohli-warne">Kohli v Warne</a>
+    <a href="./">Menu</a>
     <button id="view" type="button"></button>
   </nav>
   <section id="bottom">
     <div id="call" aria-live="polite"><div id="result"></div><div id="delivery"></div></div>
     <div id="shots" role="group" aria-label="Choose a shot"></div>
-    <div id="hint">Arrows: ↑ drive, ↓ defend, ← cut, → work. With Shift: loft, sweep, leave, pull. Keys 1-8 also work. Space lets the batting network choose. C switches view. Data: Cricsheet, CC BY 4.0.</div>
+    <div id="bowling" role="group" aria-label="Choose length and line" hidden>
+      <div class="bowl-row" id="bowl-lengths"></div>
+      <div class="bowl-row" id="bowl-lines"></div>
+    </div>
+    <div id="hint"></div>
   </section>
+  <main id="menu" hidden>
+    <div id="menu-box">
+      <h1>Cross-Era Cricket Duel</h1>
+      <section>
+        <h2>Pick a player. Matchups are always old era against new era.</h2>
+        <div id="menu-players"></div>
+      </section>
+      <section id="menu-options">
+        <div><h2>Mode</h2><div id="menu-modes"></div></div>
+        <div><h2><label for="menu-overs">Overs</label></h2><select id="menu-overs"><option>1</option><option>2</option><option selected>3</option><option>5</option></select></div>
+        <div><h2><label for="menu-lives">Lives</label></h2><select id="menu-lives"><option>1</option><option>2</option><option selected>3</option><option>5</option></select></div>
+      </section>
+      <button id="menu-start" type="button">Play <span id="menu-duel"></span></button>
+    </div>
+  </main>
   <div id="banner" hidden>
     <div id="banner-title"></div>
     <div id="banner-detail"></div>

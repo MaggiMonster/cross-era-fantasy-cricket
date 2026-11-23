@@ -5,13 +5,13 @@
 // &closeup=1 starts in the close view. The C key switches views at any time.
 import * as THREE from "three";
 import { Duel, Networks, mulberry32 } from "./model/duel.js";
-import { SHOTS, shotForKey } from "./controls.js";
+import { LENGTHS, LINES, SHOTS, bowlingKey, shotForKey } from "./controls.js";
+import { showMenu } from "./menu.js";
 import { clipFor } from "./shots.js";
 import { createBatter, createBowler, KIT, SWING } from "./scene/players.js";
 import { buildStadium } from "./scene/stadium.js";
-import { deliveryPath, placeholderHit, sampleAt, BALL_RADIUS } from "./sim/ball.js";
+import { deliveryPath, placeholderHit, sampleAt, BALL_RADIUS, BOWLERS, RELEASE_Z } from "./sim/ball.js";
 
-const RUN_UP_SECONDS = { bumrah: 1.7, warne: 1.05 };
 // Each view has a wide framing before the ball and a tight one by the time it is bowled.
 const shotView = (px, py, pz, tx, ty, tz, fov) => ({ position: new THREE.Vector3(px, py, pz), target: new THREE.Vector3(tx, ty, tz), fov });
 const CLOSE = shotView(-6.2, 1.45, -7.4, 0.05, 0.55, -8.75, 34);
@@ -23,7 +23,14 @@ const LABEL = { outside_off: "outside off", stumps: "on the stumps", leg: "down 
 
 const params = new URLSearchParams(location.search);
 const [batterId, bowlerId] = (params.get("matchup") ?? "tendulkar-bumrah").split("-");
-const auto = params.get("auto") === "1";
+const requestedMode = params.get("mode") ?? (params.get("auto") === "1" ? "auto" : "bat");
+const mode = ["bat", "bowl", "auto"].includes(requestedMode) ? requestedMode : "bat";
+const auto = mode === "auto";
+const HINTS = {
+  bat: "Arrows: ↑ drive, ↓ defend, ← cut, → work. With Shift: loft, sweep, leave, pull. Keys 1-8 also work. Space lets the batting network choose. C switches view. Data: Cricsheet, CC BY 4.0.",
+  bowl: "Keys 1-5 pick the length. ← off, ↓ stumps, → leg pick the line. Enter or Space bowls. The batting network replies. C switches view. Data: Cricsheet, CC BY 4.0.",
+  auto: "Auto mode: the networks play both sides. C switches view. Data: Cricsheet, CC BY 4.0.",
+};
 const seedParam = params.get("seed");
 const positive = (name, fallback) => {
   const value = Number.parseInt(params.get(name) ?? "", 10);
@@ -31,6 +38,7 @@ const positive = (name, fallback) => {
 };
 
 const $ = (id) => document.getElementById(id);
+const ballStart = (id) => ({ x: BOWLERS[id].releaseX, y: BOWLERS[id].releaseHeight, z: RELEASE_Z });
 
 function setupRenderer() {
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: params.has("capture") });
@@ -67,7 +75,7 @@ async function start() {
 
   const { striker } = buildStadium(scene);
   const batter = await createBatter(batterId, params.get("motion") ?? "scripted");
-  const bowler = createBowler(bowlerId);
+  const bowler = await createBowler(bowlerId, params.get("motion") ?? "scripted");
   scene.add(batter.root, bowler.root);
   const ball = new THREE.Mesh(
     new THREE.SphereGeometry(BALL_RADIUS * 1.5, 18, 12),
@@ -113,13 +121,38 @@ async function start() {
     ballView = null;
     push = 0;
     applyView();
-    const d = duel.nextDelivery();
-    $("delivery").textContent = `Next ball: ${d.bowl_type}, ${d.length}, ${LABEL[d.line]}`;
+    if (mode === "bowl") {
+      showPlan();
+    } else {
+      const d = duel.nextDelivery();
+      $("delivery").textContent = `Next ball: ${d.bowl_type}, ${d.length}, ${LABEL[d.line]}`;
+    }
     $("result").textContent = "";
     $("shots").classList.remove("locked");
+    $("bowling").classList.remove("locked");
     scoreboard();
     phase = "await";
     clock = 0;
+  }
+
+  // The human bowler's plan carries over from ball to ball until it is changed.
+  const plan = { length: "good", line: "stumps" };
+  function showPlan() {
+    $("delivery").textContent = `Your ball: ${plan.length}, ${LABEL[plan.line]}`;
+    for (const button of $("bowl-lengths").children) button.classList.toggle("active", button.dataset.length === plan.length);
+    for (const button of $("bowl-lines").children) {
+      if (button.dataset.line) button.classList.toggle("active", button.dataset.line === plan.line);
+    }
+  }
+  function setPlan(change) {
+    if (phase !== "await") return;
+    Object.assign(plan, change);
+    showPlan();
+  }
+  function bowlPlan() {
+    if (phase !== "await") return;
+    duel.chooseDelivery(plan.length, plan.line);
+    playBall(null);
   }
 
   function playBall(shot) {
@@ -135,6 +168,7 @@ async function start() {
     const contact = (connects && batter.planContact(clip, path.points)) || path.crease;
     ballView = { result, clip, path, contact, hit: null, hitAt: 0 };
     $("shots").classList.add("locked");
+    $("bowling").classList.add("locked");
     phase = "runup";
     clock = 0;
   }
@@ -165,10 +199,13 @@ async function start() {
   function update(dt) {
     clock += dt;
     batter.update(dt);
+    bowler.update(dt);
     if (phase === "await" && auto && clock > 0.35) playBall(null);
     if (phase === "runup") {
-      const f = Math.min(clock / RUN_UP_SECONDS[bowlerId], 1);
+      const f = Math.min(clock / bowler.runUpSeconds, 1);
       bowler.setRunUp(f);
+      const inHand = bowler.ballPoint();
+      if (inHand) { ball.visible = true; ball.position.copy(inHand); }
       push = f * f * (3 - 2 * f);
       if (f >= 1) { phase = "flight"; clock = 0; ball.visible = true; }
     }
@@ -228,13 +265,44 @@ async function start() {
     button.addEventListener("click", () => playBall(shot));
     buttons.appendChild(button);
   });
+  LENGTHS.forEach((length, i) => {
+    const button = document.createElement("button");
+    button.dataset.length = length;
+    button.innerHTML = `<kbd>${i + 1}</kbd>${length}`;
+    button.addEventListener("click", (event) => { setPlan({ length }); event.currentTarget.blur(); });
+    $("bowl-lengths").appendChild(button);
+  });
+  LINES.forEach((line, i) => {
+    const button = document.createElement("button");
+    button.dataset.line = line;
+    button.innerHTML = `<kbd>${["←", "↓", "→"][i]}</kbd>${LABEL[line]}`;
+    button.addEventListener("click", (event) => { setPlan({ line }); event.currentTarget.blur(); });
+    $("bowl-lines").appendChild(button);
+  });
+  const bowlButton = document.createElement("button");
+  bowlButton.innerHTML = "<kbd>Enter</kbd>Bowl";
+  bowlButton.addEventListener("click", (event) => { bowlPlan(); event.currentTarget.blur(); });
+  $("bowl-lines").appendChild(bowlButton);
+  $("shots").hidden = mode !== "bat";
+  $("bowling").hidden = mode !== "bowl";
+  $("hint").textContent = HINTS[mode];
+
   addEventListener("keydown", (event) => {
-    const chosen = shotForKey(event.key, event.shiftKey);
-    if (chosen) {
-      event.preventDefault();
-      playBall(chosen);
+    if (mode === "bowl") {
+      const action = bowlingKey(event.key);
+      if (action) {
+        event.preventDefault();
+        if (action.bowl) bowlPlan();
+        else setPlan(action);
+      }
+    } else if (mode === "bat") {
+      const chosen = shotForKey(event.key, event.shiftKey);
+      if (chosen) {
+        event.preventDefault();
+        playBall(chosen);
+      }
+      if (event.code === "Space") { event.preventDefault(); playBall(null); }
     }
-    if (event.code === "Space") { event.preventDefault(); playBall(null); }
     if (event.key.toLowerCase() === "c" && !event.metaKey && !event.ctrlKey) switchView();
     if (event.key.toLowerCase() === "r" && phase === "over") newDuel();
   });
@@ -250,6 +318,29 @@ async function start() {
 
   const fixedFrames = params.has("frames") ? Number(params.get("frames")) : null;
   for (let i = 0; fixedFrames !== null && i < fixedFrames && phase !== "over"; i++) update(1 / 60);
+
+  // Close-up for reviewing the bowling action: &bowlpose=0.9 holds that fraction of the run-up,
+  // and values from 1 to 2 hold the follow-through.
+  if (params.has("bowlpose")) {
+    const f = Number(params.get("bowlpose"));
+    if (f <= 1) bowler.setRunUp(f);
+    else bowler.followThrough(f - 1);
+    const at = bowler.ballPoint() ?? bowler.root.position;
+    ball.visible = true;
+    ball.position.copy(at);
+    bowler.root.updateMatrixWorld(true);
+    const body = new THREE.Box3().setFromObject(bowler.root).getCenter(new THREE.Vector3());
+    camera.fov = 30;
+    camera.position.set(body.x - 6.5, 1.5, body.z - 1.5);
+    camera.lookAt(body.x, 1.05, body.z);
+    camera.updateProjectionMatrix();
+    document.querySelectorAll("#board,#matchups,#bottom").forEach((el) => { el.hidden = true; el.style.display = "none"; });
+    const start = ballStart(bowlerId);
+    document.title = `hand ${at.x.toFixed(3)} ${at.y.toFixed(3)} ${at.z.toFixed(3)} physics ${start.x} ${start.y} ${start.z}`;
+    renderer.setAnimationLoop(() => renderer.render(scene, camera));
+    window.__ready = true;
+    return;
+  }
 
   // Close-up for reviewing one shot, seen from the off side.
   const held = params.get("pose")?.split(":");
@@ -274,8 +365,13 @@ async function start() {
   });
 }
 
-start().catch((error) => {
-  $("error").textContent = `Could not start the game: ${error.message}`;
-  $("error").hidden = false;
-  throw error;
-});
+// With no options in the URL the game opens on the menu.
+if (location.search === "") {
+  showMenu();
+} else {
+  start().catch((error) => {
+    $("error").textContent = `Could not start the game: ${error.message}`;
+    $("error").hidden = false;
+    throw error;
+  });
+}

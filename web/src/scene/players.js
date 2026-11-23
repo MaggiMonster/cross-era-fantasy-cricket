@@ -3,7 +3,7 @@
 // root, setRunUp(f), setSwing(shot, f), reset(), update(dt).
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { closestToBlade } from "../sim/ball.js";
+import { BOWLERS, RELEASE_Z, closestToBlade } from "../sim/ball.js";
 import { plantedFoot } from "../shots.js";
 import { moveWorld, reachFraction, reachTo, rotateWorld } from "./ik.js";
 
@@ -14,6 +14,8 @@ const MAX_SHUFFLE = 0.24; // Metres the batter may shuffle across the crease to 
 const MAX_WRIST_TURN = THREE.MathUtils.degToRad(48); // How far the wrists may turn the bat.
 const BLADE = [0.36, 0.86]; // Hitting part of the bat, in metres from the top of the handle.
 const RECOVER_SECONDS = 0.3;
+// Seconds from the start of each delivery clip to the release (pipeline/build_bowler.py).
+const BOWLER_RELEASE = { bumrah: 1.7, warne: 1.4 };
 const smooth = (x) => {
   const t = Math.min(Math.max(x, 0), 1);
   return t * t * (3 - 2 * t);
@@ -343,7 +345,102 @@ function createCapsuleBatter(id) {
   };
 }
 
-export function createBowler(id) {
+/** A rigged bowler from /player-assets, or null if its files are not available. */
+async function loadRiggedBowler(id, source) {
+  const loader = new GLTFLoader();
+  let character, motion;
+  try {
+    [character, motion] = await Promise.all([
+      loader.loadAsync(`/player-assets/characters/${id}.glb`),
+      loader.loadAsync(`/player-assets/animations/${source}/${id}.glb`),
+    ]);
+  } catch {
+    return null;
+  }
+  const clip = motion.animations.find((c) => c.name === `${id}_delivery`);
+  const idleClip = motion.animations.find((c) => c.name === "idle");
+  if (!clip || !idleClip) return null;
+
+  const root = new THREE.Group();
+  const model = character.scene;
+  model.traverse((node) => {
+    if (node.isMesh) {
+      node.castShadow = true;
+      node.frustumCulled = false;
+    }
+  });
+  root.add(model);
+  root.rotation.y = Math.PI; // The model runs towards its own front, which is the striker.
+
+  const print = backPrint(KIT[id]);
+  print.scale.setScalar(0.8);
+  print.position.set(0, 1.24 * (KIT[id].height / 1.75), -0.16);
+  print.rotation.y = Math.PI;
+  const chest = model.getObjectByName("spine_03");
+  root.add(print);
+  root.updateMatrixWorld(true);
+  chest?.attach(print);
+
+  const mixer = new THREE.AnimationMixer(model);
+  const idle = mixer.clipAction(idleClip);
+  const delivery = mixer.clipAction(clip);
+  const hand = model.getObjectByName("hand_r");
+  const middle = model.getObjectByName("middle_01_r");
+  const releaseSeconds = BOWLER_RELEASE[id];
+  const held = new THREE.Vector3();
+  const knuckle = new THREE.Vector3();
+
+  /** The ball sits just past the wrist, in the fingers. */
+  const ballPoint = () => {
+    model.updateMatrixWorld(true);
+    hand.getWorldPosition(held);
+    middle.getWorldPosition(knuckle);
+    return held.lerp(knuckle, 1.25);
+  };
+  const pose = (time) => {
+    idle.stop();
+    delivery.play();
+    delivery.paused = true;
+    delivery.time = Math.min(time, clip.duration - 1e-3);
+    mixer.update(0);
+  };
+
+  // Stand the bowler so the hand is exactly where the ball physics releases it.
+  pose(releaseSeconds);
+  root.position.set(0, 0, 0);
+  root.updateMatrixWorld(true);
+  const atRelease = ballPoint().clone();
+  const style = BOWLERS[id];
+  root.position.set(style.releaseX - atRelease.x, 0, RELEASE_Z - atRelease.z);
+
+  const showIdle = () => {
+    delivery.stop();
+    idle.play();
+    mixer.update(0);
+  };
+  showIdle();
+
+  return {
+    root,
+    rigged: true,
+    runUpSeconds: releaseSeconds,
+    reset: showIdle,
+    update(dt) { if (idle.isRunning()) mixer.update(dt); },
+    setRunUp(f) { pose(f * releaseSeconds); },
+    followThrough(f) { pose(releaseSeconds + f * (clip.duration - releaseSeconds)); },
+    ballPoint,
+  };
+}
+
+/** The rigged bowler if available, otherwise the capsule. */
+export async function createBowler(id, source = "scripted") {
+  const rigged = await loadRiggedBowler(id, source);
+  if (rigged) return rigged;
+  console.info(`No rigged character for ${id}, using the capsule.`);
+  return createCapsuleBowler(id);
+}
+
+function createCapsuleBowler(id) {
   const kit = KIT[id];
   const { root } = capsuleBody(kit);
   const arm = new THREE.Group();
@@ -362,6 +459,9 @@ export function createBowler(id) {
 
   return {
     root,
+    runUpSeconds: BOWLER_RELEASE[id],
+    update() {},
+    ballPoint: () => null,
     reset() { root.position.copy(start); arm.rotation.x = Math.PI; },
     /** f runs 0 to 1 over the run-up. Arm comes over at the end. */
     setRunUp(f) {

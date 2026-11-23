@@ -6,6 +6,7 @@
 export const PITCH_HALF = 10.06;
 export const POPPING_Z = -8.84;
 export const BALL_RADIUS = 0.036;
+export const RELEASE_Z = 8.9;
 
 const GRAVITY = 9.81;
 // 0.5 * air density * drag coefficient * area / mass for a cricket ball.
@@ -22,8 +23,8 @@ const LINE_X = { outside_off: -0.36, stumps: -0.02, leg: 0.24 };
 
 // Bowler styles. `turn` is sideways speed added at the bounce (negative: leg to off).
 export const BOWLERS = {
-  bumrah: { speed: 39.5, releaseHeight: 2.12, releaseX: -0.42, swing: -0.9, turn: 0.12, restitution: 0.58, grip: 0.86, dip: 0 },
-  warne: { speed: 22.5, releaseHeight: 1.86, releaseX: -0.3, swing: 0.25, turn: -2.1, restitution: 0.56, grip: 0.8, dip: 1.7 },
+  bumrah: { speed: 39.5, releaseHeight: 2.08, releaseX: -0.42, swing: -0.9, turn: 0.12, restitution: 0.58, grip: 0.86, dip: 0 },
+  warne: { speed: 22.5, releaseHeight: 2.11, releaseX: -0.3, swing: 0.25, turn: -2.1, restitution: 0.56, grip: 0.8, dip: 1.7 },
 };
 
 function step(s, style, bounced) {
@@ -87,7 +88,7 @@ export function deliveryPath(bowler, delivery, jitter = { speed: 0, length: 0, l
   const targetZ = -PITCH_HALF + distance;
   const targetX = LINE_X[delivery.line] + jitter.line;
   const speed = style.speed + jitter.speed;
-  const release = { x: style.releaseX, y: style.releaseHeight, z: 8.9 };
+  const release = { x: style.releaseX, y: style.releaseHeight, z: RELEASE_Z };
 
   const launch = (vx, vy) => fly(release, { vx, vy, vz: -Math.sqrt(Math.max(speed * speed - vx * vx - vy * vy, 1)) }, style);
 
