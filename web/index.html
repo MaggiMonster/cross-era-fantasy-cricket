@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cross-Era Cricket Duel</title>
+  <style>
+    :root { --panel: rgba(10, 22, 40, .88); --ink: #f8fafc; --muted: #a9b8c9; --accent: #fbbf24; --out: #f87171; --four: #4ade80; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0a1628; color: var(--ink); font: 15px/1.3 system-ui, -apple-system, sans-serif; }
+    #stage, #stage canvas { position: fixed; inset: 0; display: block; }
+    #board { position: fixed; top: 16px; left: 16px; display: flex; align-items: stretch; background: var(--panel); border-radius: 8px; overflow: hidden; }
+    #score { padding: 10px 16px; background: var(--accent); color: #111827; font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; display: flex; align-items: center; }
+    #info { padding: 8px 14px; display: grid; gap: 2px; }
+    #names { font-weight: 700; letter-spacing: .03em; }
+    #meta { color: var(--muted); display: flex; gap: 12px; font-variant-numeric: tabular-nums; }
+    #lives { color: var(--out); letter-spacing: .12em; }
+    #matchups { position: fixed; top: 16px; right: 16px; display: flex; gap: 4px; background: var(--panel); padding: 4px; border-radius: 8px; }
+    #matchups a { color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 5px; font-size: 13px; }
+    #matchups a.active { background: #1e3a5f; color: var(--ink); }
+    #bottom { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); width: min(820px, calc(100vw - 32px)); display: grid; gap: 8px; justify-items: center; }
+    #call { background: var(--panel); padding: 7px 16px; border-radius: 8px; text-align: center; }
+    #result { font-weight: 800; font-size: 19px; }
+    #result:empty { display: none; }
+    #result.wicket { color: var(--out); }
+    #result.boundary { color: var(--four); }
+    #shots { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; width: 100%; background: var(--panel); padding: 6px; border-radius: 8px; }
+    #shots.locked { opacity: .45; pointer-events: none; }
+    button { font: inherit; color: var(--ink); background: #1e3a5f; border: 0; border-radius: 5px; padding: 7px 2px; cursor: pointer; text-transform: capitalize; min-width: 0; }
+    button:hover { background: #2b5288; }
+    button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    kbd { display: block; font: 700 11px system-ui; color: var(--accent); }
+    #hint { color: #e2e8f0; font-size: 12px; text-shadow: 0 1px 3px #000; text-align: center; }
+    #banner { position: fixed; inset: 0; display: grid; place-content: center; text-align: center; background: rgba(5, 12, 24, .62); }
+    #banner[hidden], #error[hidden] { display: none; }
+    #banner-title { font-size: clamp(30px, 6vw, 56px); font-weight: 900; color: var(--accent); }
+    #banner-detail { margin: 6px 0 16px; }
+    #again { padding: 10px 20px; text-transform: none; font-weight: 700; }
+    #error { position: fixed; inset: auto 16px 16px; background: #7f1d1d; padding: 12px; border-radius: 6px; }
+    @media (max-width: 680px) {
+      #shots { grid-template-columns: repeat(4, 1fr); }
+      #matchups { top: 96px; left: 16px; right: auto; }
+      #score { font-size: 22px; padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="stage"></div>
+  <section id="board" aria-label="Scoreboard">
+    <div id="score">0/0</div>
+    <div id="info">
+      <div id="names"></div>
+      <div id="meta"><span id="target"></span><span id="overs"></span><span id="lives" aria-label="Lives"></span></div>
+      <div id="need"></div>
+    </div>
+  </section>
+  <nav id="matchups" aria-label="Matchup">
+    <a data-matchup="tendulkar-bumrah" href="?matchup=tendulkar-bumrah">Sachin v Bumrah</a>
+    <a data-matchup="kohli-warne" href="?matchup=kohli-warne">Kohli v Warne</a>
+  </nav>
+  <section id="bottom">
+    <div id="call" aria-live="polite"><div id="result"></div><div id="delivery"></div></div>
+    <div id="shots" role="group" aria-label="Choose a shot"></div>
+    <div id="hint">Keys 1-8 play a shot. Space lets the batting network choose. Data: Cricsheet, CC BY 4.0.</div>
+  </section>
+  <div id="banner" hidden>
+    <div id="banner-title"></div>
+    <div id="banner-detail"></div>
+    <div><button id="again">Play again (R)</button></div>
+  </div>
+  <div id="error" role="alert" hidden></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
