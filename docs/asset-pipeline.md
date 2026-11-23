@@ -97,7 +97,11 @@ which will look noticeably less realistic.
 
 Current decisions (2026-11-23, Turn 5):
 
-- **Faces: KeenTools FaceBuilder**, on its 15-day trial.
+- **Faces: stylised heads, not FaceBuilder (Jaivin, 2026-11-23; Apurva to confirm).** FaceBuilder's
+  EULA (sections 2.4, 10 and 13) requires the user to warrant they hold the likeness rights and
+  consents of any identifiable person in the photos, and to indemnify KeenTools. We do not have
+  those for the four players. FaceBuilder was **not installed** and its trial was **not started**.
+  The FaceBuilder notes below are kept for reference only.
 - **No self-filming and no copyrighted match footage.**
 - **Motion: ready-made cricket packs if one is approved, otherwise scripted Blender
   keyframes.** Mixamo may supply generic running. Nothing is bought without asking.

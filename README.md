@@ -27,7 +27,7 @@ the batsman's network samples a shot, and an outcome model gives dot, 1, 2, 3, 4
 | 1-3 | Both | Data, networks, outcome model, match engine, Pygame game | done |
 | 4 | Jaivin | Three.js stadium, ball physics, JS sampler, capsule players, validation, asset research | done |
 | 5 | Apurva | Character pipeline, Sachin and Kohli, eight batting shots, 3D batting controls | next |
-| 6 | Jaivin | Bumrah and Warne, bowling actions and controls, auto mode, character select | built, faces pending |
+| 6 | Jaivin | Bumrah and Warne, bowling actions and controls, auto mode, character select | done |
 | 7 | Apurva | Shot direction, fielders, replays, camera cuts, final docs, demo | planned |
 
 Play the 3D game (needs Node.js):

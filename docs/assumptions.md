@@ -212,8 +212,8 @@ bowler is labelled:
 
 ## Bowlers and human bowling (Turn 6)
 
-57. **Bowler bodies are generic MPFB humans** shaped by a **prior** height and build. They are
-    not likenesses. Faces still need FaceBuilder.
+57. **Bowler bodies and heads are generic MPFB humans** shaped by a **prior** height and build,
+    with stylised hair, brows and beard. They are not likenesses and were not made from photos.
 58. **Bowling actions are scripted keyframes**, stylised from general knowledge of each player.
     They are not motion capture or measurements.
 59. **Release heights are set by the models' reach:** 2.08 m for Bumrah (was 2.12) and 2.11 m
