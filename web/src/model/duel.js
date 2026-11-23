@@ -177,6 +177,18 @@ export class Duel {
     return this.delivery;
   }
 
+  /**
+   * A human bowler picks length and line in place of the bowling network's sample. This uses
+   * no random numbers. The batting and outcome networks still decide what happens to the ball.
+   */
+  chooseDelivery(length, line) {
+    if (this.isOver) throw new Error("the duel is over");
+    this.net.idx("length", length);
+    this.net.idx("line", line);
+    this.delivery = { bowl_type: this.net.data.bowlers[this.bowler].bowl_type, length, line };
+    return this.delivery;
+  }
+
   /** Play the ball. `shot` null lets the batting network choose. */
   play(shot = null) {
     const delivery = this.nextDelivery();
