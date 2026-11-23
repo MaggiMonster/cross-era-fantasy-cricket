@@ -2,8 +2,8 @@
 
 ## Whose turn is it?
 
-**Current turn: Turn 6 - Jaivin** (folder `~/cricket-project/project-friend`), still open.
-Everything is built except the faces. Photos for all four players are ready.
+**Next turn: Turn 7 - Apurva** (folder `~/cricket-project/project-me`).
+Turn 6 is closed. Faces are stylised rather than built with FaceBuilder (see below).
 
 The plan changed on 2026-11-23 to a 3D browser game in Three.js. The Bayesian networks,
 match engine and Pygame game stay as a working fallback. The older video-generation
@@ -16,8 +16,8 @@ handoff is in `archive/docs/HANDOFF-old-scope.md`.
 | 3 | Apurva | Match engine, Pygame screen, batting controls, pace-vs-spin adjustment | done (2026-11-23) |
 | 4 | Jaivin | Three.js scaffold, ball physics, JS sampler, capsule players, validation, asset research | done (2026-11-23) |
 | 5 | Apurva | Character pipeline, Sachin and Kohli, eight batting shots, 3D batting controls | done (2026-11-23), faces pending |
-| 6 | Jaivin | Bumrah and Warne, bowling actions and controls, auto mode, character select | **in progress**, faces pending |
-| 7 | Apurva | Shot direction and distance, fielders, replays, camera cuts, final docs, demo | planned |
+| 6 | Jaivin | Bumrah and Warne, bowling actions and controls, auto mode, character select | done (2026-11-23), stylised faces |
+| 7 | Apurva | Shot direction and distance, fielders, replays, camera cuts, final docs, demo | **next** |
 
 ## Earlier turns
 
@@ -46,7 +46,7 @@ handoff is in `archive/docs/HANDOFF-old-scope.md`.
 **DeepMotion and ExMR are no longer the main plan.** We will not film ourselves or use
 copyrighted match footage.
 
-1. **Faces:** KeenTools FaceBuilder. The photo checklist is in `docs/asset-pipeline.md`.
+1. **Faces:** stylised heads. FaceBuilder was dropped on 2026-11-23 because of its licence.
 2. **Motion:** a ready-made cricket pack if Apurva approves one, otherwise scripted Blender
    keyframes. Mixamo may supply generic running. Nothing is bought without asking.
 3. **Signature touches** for all four players are in `docs/asset-pipeline.md`.
@@ -78,7 +78,7 @@ copyrighted match footage.
   and any demo showing the faces out of public places.
 - Schema is now `1.7` for the player API. No shared types changed.
 
-## Turn 6 - Jaivin - in progress
+## Turn 6 - Jaivin - done
 
 - `pipeline/build_bowler.py` builds Bumrah and Warne on the MPFB pipeline, with scripted run-ups
   and deliveries. Their files are in `~/cricket-project/assets/`, not in git.
@@ -88,22 +88,24 @@ copyrighted match footage.
   rendered from the 3D heads, so they update when real faces arrive.
 - Release heights now match the models' reach (`docs/assumptions.md`, items 57 to 60).
 - A full one-over bowling duel was played with real key presses in headless Chrome.
+- Bumrah and Warne have stylised heads with fitted hair and painted brows and beard. They are
+  not likenesses and do not use the photos.
 - Schema is now `1.8` for the browser API. No shared types changed.
 
-## Next: finish Turn 6 - Jaivin
+## Next: Turn 7 - Apurva
 
-1. **Done.** Bumrah (6) and Warne (6) photos are saved and logged in `SOURCES.md`. Bumrah has one
-   angled view and Warne one near-side view, and most heads are under the 500-pixel target.
-2. With all four photo sets ready, install FaceBuilder, export one test head to `.glb`, then build
-   all four inside the 15-day trial. Do not start the trial before then.
-3. Close Turn 6 and hand over to Apurva for Turn 7.
+1. **Please confirm the face decision, since face methods are chosen by both of us.** FaceBuilder's
+   licence (sections 2.4, 10 and 13) makes the user promise they hold the consent and likeness
+   rights of real people in the photos, and take liability for claims. We do not have those.
+   Jaivin chose stylised heads. FaceBuilder was not installed and its trial was not started.
+2. Sachin and Kohli keep their current heads under helmets. Restyle them if you want them to match.
+3. Build shot direction and distance, fielders, replays, camera cuts, final docs and the demo.
 
 ## Blockers and open questions
 
 - **Bowler run-ups look mediocre.** Jaivin played the game on the Mac on 2026-11-23 and found the
   running animation weak. Accepted for now. Improve it later, possibly with Mixamo generic running.
-- **Faces are placeholders** until FaceBuilder is installed. Its glTF export and Blender 5.3
-  support are not yet tested. The 15-day trial covers all four heads.
+- **Faces are stylised, not likenesses.** The collected photos are kept locally but are not used.
 - **Shot quality still needs a person's judgement.** The blade reaches within 12 cm of the ball
   in 176 of 210 shot and delivery combinations. Poor shot choices can still visibly miss.
 - **No animation pack is approved.** CGTrader and TurboSquid details could not be fully
