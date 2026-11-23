@@ -64,7 +64,11 @@ copyrighted match footage.
 - **Leaving the ball now depends on line and length.** Leaving a straight full ball is high
   risk, a leave cannot score, and the rule is in `duel/matchup.py` and `web/src/model/duel.js`
   (`docs/assumptions.md`, items 46 to 50). Jaivin: this touches your Turn 2 matchup model.
-- Schema is now `1.5`. No shared types changed.
+- **Better batting animation.** Sachin and Kohli now use realistic MPFB bodies with a finger
+  grip, a trigger movement, wrist and bat-face rotation, blending between clips, and a bat that
+  is steered to the real ball. Watch it with `?closeup=1`.
+- MPFB is installed in Blender on this Mac. Turn 6 can reuse `pipeline/build_batter.py`.
+- Schema is now `1.6` for the player API. No shared types changed.
 
 ## Next: finish Turn 5 - Apurva
 
