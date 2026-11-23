@@ -1,6 +1,6 @@
 # Interface: how the batting and bowling halves connect
 
-- **Schema version:** `1.0`
+- **Schema version:** `1.1`
 - **Reference implementation:** `duel/types.py`
 - Change this file only together with `duel/types.py`, and bump `SCHEMA_VERSION`.
 
@@ -47,15 +47,35 @@ probs = net.outcome_probs(delivery, shot, state.pressure)  # {OutcomeType: p}
 `net.model` is the pgmpy `DiscreteBayesianNetwork`. Its delivery CPDs are a
 reference mix for calibration only. In a match, the delivery is evidence.
 
-## Bowling network (Turn 2, `duel/bowling.py`)
+## Bowling network (done, `duel/bowling.py`)
 
-Must provide `load_bowler(player)` for `"bumrah"` and `"warne"`, and:
+```text
+Pressure -> Length -> Line
+Pressure, Length, Line -> Outcome
+```
 
-- `sample_delivery(state, rng) -> Delivery`
-- `outcome_probs(delivery, pressure) -> {OutcomeType: p}`, the bowler's tendency
-  over the same outcome states
+```python
+from duel.bowling import load_bowler
 
-## Matchup model (Turn 2)
+net = load_bowler("bumrah")              # or "warne"
+delivery = net.sample_delivery(state, rng)
+probs = net.outcome_probs(delivery, state.pressure)  # {OutcomeType: p}
+```
 
-Must provide `P(Outcome | Delivery, Shot, Pressure, batter, bowler)`. The planned
-method is in `docs/assumptions.md`, section "Combining batter and bowler".
+Bowling type is fixed per bowler, so `outcome_probs` raises `ValueError` for a
+delivery of the other type.
+
+## Matchup model (done, `duel/matchup.py`)
+
+Provides `P(Outcome | Delivery, Shot, Pressure, batter, bowler)`. The method is in
+`docs/assumptions.md`, section "Combining batter and bowler".
+
+```python
+from duel.matchup import load_matchup
+
+duel = load_matchup("tendulkar", "bumrah")   # or ("kohli", "warne")
+delivery = duel.bowler.sample_delivery(state, rng)
+shot = duel.batter.sample_shot(delivery, state, rng)
+outcome = duel.sample_outcome(delivery, shot, state, rng)  # Outcome
+probs = duel.outcome_probs(delivery, shot, state.pressure)  # {OutcomeType: p}
+```
