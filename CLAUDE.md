@@ -1,42 +1,60 @@
-# Cross-Era Fantasy Cricket
+# Cross-Era Cricket Duel
 
-Two-person university project. Pipeline: extract motion from modern cricket videos
-(pose estimation), transfer it onto a static image of a historical player with a
-pre-trained open-source image-to-video diffusion model, then apply era-specific
-film styling. Full proposal: `docs/proposal.docx`.
+Two-person university project. A 2D 1-vs-1 cricket game where famous batsmen and
+bowlers are Bayesian networks learned from real data. Old era: Sachin Tendulkar,
+Shane Warne. New era: Virat Kohli, Jasprit Bumrah. Matchups are always old vs new:
+Sachin vs Bumrah, Kohli vs Warne.
+
+## Game
+
+The batsman chases a target over a set number of overs with a set number of lives
+(default 3 overs, 3 lives, target from the player's real scoring rate; all
+configurable). Each ball: the bowler's network samples a delivery (pace or spin,
+length, line), the batsman's network samples a shot given the delivery and match
+situation, and an outcome network gives dot, 1, 2, 3, 4, 6 or a wicket type.
+Modes: human bats, human bowls, auto.
 
 ## Hard limits
 
-- 512x512 output, 3-5 second clips (60-100 frames).
-- No training from scratch. LoRA / adapters only.
-- Hardware: one MacBook Air M4, 16 GB RAM, Apple Silicon (PyTorch MPS, no CUDA),
-  shared by both contributors.
+- Python, pgmpy for the networks, Pygame for a simple 2D side-on view.
+- Must run on one MacBook Air M4, 16 GB RAM, no GPU, shared by both contributors.
+
+## Data rules
+
+- Ball-by-ball data: Cricsheet (free, CC BY 4.0, always credit). It has runs,
+  wickets and dismissal types but no line or length. We use Tests + IPL.
+- Career aggregates go in `duel/data/career_stats.csv`, hand-entered, with a source
+  for every number. Do not scrape sites whose terms forbid it.
+- Anything not in the data is a documented prior, adjusted by the player's real
+  stats. Write every assumption in `docs/assumptions.md`.
+- These matchups never happened: document how batsman and bowler probabilities
+  are combined.
 
 ## Contributors
 
-| Person | GitHub       | Folder                            |
-|--------|--------------|-----------------------------------|
-| Apurva | MaggiMonster | `~/cricket-project/project-me`     |
-| Jaivin | JaivinB      | `~/cricket-project/project-friend` |
+| Person | GitHub       | Folder                             | Owns    |
+|--------|--------------|------------------------------------|---------|
+| Apurva | MaggiMonster | `~/cricket-project/project-me`     | Batsmen (Sachin, Kohli) |
+| Jaivin | JaivinB      | `~/cricket-project/project-friend` | Bowlers (Bumrah, Warne) |
 
 Both folders are clones of the same repo. Turns alternate, and the folder you are
 running in decides who the current person is.
 
 ## Work packages
 
-- **Turn 1 - Apurva:** repo scaffolding (CLAUDE.md, README, .gitignore, HANDOFF.md,
-  folders), `docs/interface.md` (pose-sequence format), core of `pose/` (video ->
-  per-frame joints in that format).
-- **Turn 2 - Jaivin:** `generation/` environment (venv, requirements), verify
-  PyTorch MPS, choose a pre-trained open-source image-to-video model that runs in
-  16 GB on Apple Silicon (quantized/reduced variant if needed), download weights
-  into an ignored folder, run a tiny smoke test with memory logging.
-- **Turn 3 - Apurva:** finish Milestone 1: normalize and smooth pose sequences,
-  skeleton-overlay video, isolate the delivery stride / action segment, tests, docs.
-- **Turn 4 - Jaivin:** finish Milestone 2: image-to-video at 512x512 for 3-5 s with
-  memory logging and no OOM, document fallbacks (fewer frames, lower resolution,
-  offloading), Colab/Kaggle notebook for heavier runs, results in `docs/m2-results.md`.
-- **After Turn 4:** summarize both milestones and propose the plan for Milestone 3.
+- **Turn 1 - Apurva:** repo restructure and docs; `docs/interface.md` (Delivery,
+  Shot, Outcome, MatchState, network structure); shared Cricsheet download and
+  parsing; batting networks for Sachin and Kohli, with tests.
+- **Turn 2 - Jaivin:** bowling networks for Bumrah and Warne (pace vs leg-spin
+  delivery distributions, wicket-taking tendencies); the combined per-ball outcome
+  model for a matchup; tests.
+- **Turn 3 - Apurva:** match engine (overs, lives, target, ball-by-ball sampling);
+  Pygame screen with pitch, batsman sprite and shot animations, batting controls,
+  scoreboard.
+- **Turn 4 - Jaivin:** bowler run-up and ball path that depends on length and line,
+  bowling controls, auto mode, matchup menu; validation that simulates 1000 duels
+  per matchup and compares results to the players' real numbers, in
+  `docs/validation.md`.
 
 ## Rules (apply to every session)
 
@@ -48,9 +66,7 @@ running in decides who the current person is.
 2. Work only on the current turn's package. Do not start the next person's
    package, even if asked.
 3. Commit in small, clear commits and run any tests before pushing.
-4. For test video: if I have not supplied a clip, ask me for one, or use a
-   synthetic or openly licensed clip clearly labeled as a placeholder. Do not
-   download copyrighted broadcast footage.
+4. Never add Claude attribution to commits or pull requests.
 5. At the end of each turn: run tests, push all commits, update HANDOFF.md (what
    was done, what is next, blockers), commit and push that too. Then give a
    plain-language summary of what you changed so the current person can review
@@ -59,16 +75,13 @@ running in decides who the current person is.
 
 ## Layout and commands
 
-- `pose/` - Part 1, motion extraction. Own venv at `pose/.venv` (`pose/README.md`).
-- `generation/` - Part 2, image-to-video. Own venv at `generation/.venv`.
-- `era_filters/`, `evaluation/` - later milestones.
-- `docs/interface.md` - the contract between `pose/` and `generation/`. Change it
-  only together with `pose/format.py` and bump `schema_version`.
-- Run everything from the repo root:
-  - tests: `pose/.venv/bin/python -m pytest tests -q`
-  - extract: `pose/.venv/bin/python -m pose.extract <video> --action <label>`
-  - overlay: `pose/.venv/bin/python -m pose.overlay <video> <pose file> --smooth 5 --still`
-  - generation tests: `generation/.venv/bin/python -m pytest tests/test_generation_memlog.py -q`
-  - generation smoke test: `generation/.venv/bin/python -m generation.smoke_test`
-    (setup and status: `generation/README.md`, `docs/m2-status.md`)
-- Weights, videos, `outputs/` and venvs are git-ignored; never commit them.
+- `duel/types.py` - shared types. `docs/interface.md` is the contract; change them
+  together and bump `SCHEMA_VERSION`.
+- `duel/cricsheet.py` - download and parse. `duel/career.py` - career stats.
+- `duel/batting.py` - batting networks.
+- `archive/` - old video-generation scope; do not extend it.
+- Run everything from the repo root, using the venv at `.venv`:
+  - setup: `/opt/homebrew/bin/python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt`
+  - tests: `.venv/bin/python -m pytest tests -q`
+  - rebuild data: `.venv/bin/python -m duel.cricsheet`
+- Raw data, `outputs/` and venvs are git-ignored; never commit them.

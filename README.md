@@ -1,53 +1,55 @@
-# Cross-Era Fantasy Cricket
+# Cross-Era Cricket Duel
 
-Generate short clips of historical cricketers performing actions captured from
-modern players: "what would Bradman look like facing a modern fast bowler?"
+A 2D cricket game where famous batsmen and bowlers are modelled as Bayesian
+networks learned from real data, then played against each other.
 
 University project by Apurva Verma (MaggiMonster) and Jaivin (JaivinB).
-The full proposal is in [`docs/proposal.docx`](docs/proposal.docx).
 
-## Pipeline
+| Era | Batsman | Bowler |
+|-----|---------|--------|
+| Old | Sachin Tendulkar (1989-2013) | Shane Warne, leg-spin (1992-2007) |
+| New | Virat Kohli (2008 onwards) | Jasprit Bumrah, fast (2016 onwards) |
 
-1. **Motion extraction** (`pose/`) - pose estimation on a modern cricket clip
-   gives a per-frame joint sequence.
-2. **Image-to-video generation** (`generation/`) - a pre-trained open-source
-   diffusion model animates a still image of a historical player along that motion.
-3. **Era styling** (`era_filters/`) - grain, grading and frame-rate changes to
-   match 1930s film or 1970s television.
-4. **Evaluation** (`evaluation/`) - temporal smoothness and motion fidelity.
+Matchups are always old vs new: **Sachin vs Bumrah** and **Kohli vs Warne**.
 
-Stages 1 and 2 talk to each other only through the pose-sequence file described
-in [`docs/interface.md`](docs/interface.md).
+## The game
 
-## Constraints
+The batsman chases a target with limited overs and lives (default 3 overs, 3
+lives, all configurable). On each ball the bowler's network samples a delivery,
+the batsman's network samples a shot, and an outcome model gives dot, 1, 2, 3, 4,
+6 or a wicket type. Modes: human bats, human bowls, or auto.
 
-- One MacBook Air M4, 16 GB RAM, Apple Silicon (PyTorch MPS, no CUDA).
-- 512x512, 3-5 second clips (60-100 frames).
-- Pre-trained weights only; LoRA / adapters, no training from scratch.
+## Status
 
-## Milestones
+| Part | Status |
+|------|--------|
+| Data pipeline, shared types, batting networks | done |
+| Bowling networks, matchup outcome model | Turn 2 |
+| Match engine, Pygame screen, batting controls | Turn 3 |
+| Bowling view and controls, auto mode, menu, validation | Turn 4 |
 
-| # | Goal | Status |
-|---|------|--------|
-| 1 | Motion extraction toolkit, delivery stride isolated | in progress |
-| 2 | Image-to-video model running locally without OOM | not started |
-| 3 | Pose-conditioned generation via control adapters | not started |
-| 4 | Era filters, evaluation, final catalog | not started |
+The game is not playable yet.
 
-## Quick start (pose extraction)
+## Setup
+
+Python 3.12 on Apple Silicon, no GPU needed. Run from the repo root:
 
 ```sh
-python3 -m venv pose/.venv
-pose/.venv/bin/pip install -r pose/requirements.txt
-pose/.venv/bin/python -m pose.extract path/to/clip.mp4 --action cover_drive
-pose/.venv/bin/python -m pytest tests -q
+/opt/homebrew/bin/python3.12 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python -m pytest tests -q
+.venv/bin/python -m duel.cricsheet   # optional: rebuild data from Cricsheet
 ```
 
-See [`pose/README.md`](pose/README.md) for details and
-[`data/README.md`](data/README.md) for the placeholder test clip.
+## Docs
 
-## Working on this repo
+- [`docs/interface.md`](docs/interface.md) - types and network structure
+- [`docs/assumptions.md`](docs/assumptions.md) - every prior and modelling choice
+- [`HANDOFF.md`](HANDOFF.md) - whose turn it is
+- [`archive/`](archive/README.md) - the old video-generation scope
 
-Work alternates between the two contributors in turns. [`HANDOFF.md`](HANDOFF.md)
-says whose turn it is and what is next; [`CLAUDE.md`](CLAUDE.md) holds the rules.
-Model weights, videos, outputs and virtual environments are git-ignored.
+## Data credit
+
+Ball-by-ball data from [Cricsheet](https://cricsheet.org), licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), filtered and aggregated
+by us. Career figures are in `duel/data/career_stats.csv`, each with its source.

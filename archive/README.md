@@ -7,7 +7,7 @@ maintained.
 
 - `pose/`, `generation/`, `era_filters/`, `evaluation/` - the old code.
 - `tests/` - the old tests.
-- `docs/` - the old proposal, pose interface and Milestone 2 status.
+- `docs/` - the old proposal, pose interface, Milestone 2 status, handoff and placeholder clip notes.
 
 Commands in these files assume the old layout, with the folders at the repo root.
 Virtual environments are not portable, so recreate one before running anything.
