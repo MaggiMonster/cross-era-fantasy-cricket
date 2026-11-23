@@ -14,7 +14,8 @@ Player photos, generated heads and source clips are never committed.
   photos/<player>/
   clips/<shot or action>/
   characters/<player>.glb
-  animations/<shot or action>.glb
+  raw/<source>/<action>/<take>.fbx
+  animations/<source>/<action>.glb
 ```
 
 `npm run dev` serves `.glb`, `.gltf` and image files from that folder at
@@ -57,7 +58,8 @@ capture conditions: fixed camera, full body in frame, high frame rate, one perso
 | Mixamo library | Clean animation, but we could not confirm any cricket motions | Free | Website | **Adobe account**. Page could not be read |
 | MediaPipe (`archive/pose`) | **Fallback only.** 33 joints, no body mesh or joint rotations | Free | This Mac | None |
 
-**Recommendation: ExMR on the RTX 4060, with GVHMR as the backup.** Batting and bowling
+**Research recommendation: ExMR on the RTX 4060, with GVHMR as the backup.** We are
+starting with DeepMotion for speed and will compare ExMR later (see "Decisions"). Batting and bowling
 depend on foot placement and hands on the bat, which ExMR models and GVHMR does not. Both
 run locally, so no footage leaves our machines. The risk is that 8 GB is exactly ExMR's
 tested memory size, and it was tested on Linux. Test one clip before relying on it.
@@ -93,7 +95,61 @@ which will look noticeably less realistic.
 
 ## Decisions
 
-Pending. See `HANDOFF.md`.
+- **Motion capture (decided 2026-11-23): start with an online service, DeepMotion
+  Animate 3D**, to get working animations quickly. Apurva creates the account and uploads
+  the clips personally. Later, run the same clips through ExMR on Apurva's RTX 4060
+  (Windows, via WSL) and compare side by side.
+- **Why DeepMotion over Rokoko:** its free tier is 60 s a month against Rokoko's 30 s. All
+  ten actions need about 37 s, leaving room for reruns.
+- **Face method and clip source: still open.** See `HANDOFF.md`.
+
+## Source-independent motion pipeline
+
+The game must never know which tool made an animation. Every source goes through the
+same steps and produces the same files:
+
+```text
+clips/<action>/<take>.mp4              one trimmed master clip, used by every source
+raw/<source>/<action>/<take>.fbx       untouched tool output (source: deepmotion, exmr)
+animations/<source>/<action>.glb       retargeted to our one character rig
+```
+
+- `<action>` is one of `leave`, `defend`, `work`, `drive`, `cut`, `pull`, `sweep`, `loft`,
+  `bumrah_delivery`, `warne_delivery`.
+- Each `.glb` has one clip named after the action, the same rig, 30 fps, and root motion
+  handled the same way. Only the retargeting input differs per source.
+- Turn 5 should let the game pick a source with `?motion=deepmotion` or `?motion=exmr`.
+- **Comparison:** same master clip, same rig and camera, played side by side. Score foot
+  sliding, bat and hand position, fast-swing accuracy and jitter.
+- ExMR under WSL is **untested**. Its authors tested native Linux with about 8 GB of GPU
+  memory, which is all an RTX 4060 has. Test one clip first.
+
+## DeepMotion: what to click
+
+Labels marked *(check)* could not be confirmed from DeepMotion's docs and may differ.
+
+Before uploading: trim each clip to only the action (about 3 s per shot, 5 to 8 s per
+bowling action), one person, full body, fixed camera, MP4 or MOV, under 50 MB.
+
+1. Go to <https://www.deepmotion.com/animate-3d> and click **Free to Use - Sign Up Now**.
+2. Choose **Create Freemium Account**. No card is needed. Do not click **Upgrade**.
+3. Open the activation email, click **Please Click Here to Activate Your Account**, and
+   set a password.
+4. Sign in at <https://portal.deepmotion.com> with your email as the username.
+5. Click **Animate 3D**, then **Create**.
+6. Upload one clip and label it with the action name, for example `drive`.
+7. Keep **Foot Locking** on **Auto** and turn **Physics Simulation** on *(check)*. Leave
+   **Face & Hand Tracking off**, because it costs 1.5 credits per second instead of 1.
+   Leave **Speed Multiplier** at its default unless the clip is slow motion.
+8. Confirm the credit cost, then start the job *(check)*.
+9. Check the preview. Rerun only if needed, because reruns may use credits.
+10. Download **FBX** *(check)* and save it as
+    `~/cricket-project/assets/raw/deepmotion/<action>/<take>.fbx`.
+11. Add the clip's origin to `~/cricket-project/assets/SOURCES.md`.
+
+Privacy: DeepMotion's terms let it process uploads through machine-learning models to
+improve its services. Upload only clips you are allowed to share, and get consent from
+anyone recognisable. Free-tier output is for non-commercial use only.
 
 ## Sources
 
