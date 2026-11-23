@@ -55,36 +55,36 @@ P(o | d, s, p) proportional to batter(o | d, s, p) * bowler(o | d, p) / baseline
 way for both sides. A batter and bowler who are both average then give the
 baseline, and each player's deviation from average carries through.
 
-21. **Baseline population** is every ball in the Cricsheet Tests + IPL archives,
+15. **Baseline population** is every ball in the Cricsheet Tests + IPL archives,
     all batters and bowlers. It goes through the same smoothing, Test/IPL blend and
     batting tables as a player.
-22. **The baseline depends on the delivery.** Both the batter's and the bowler's
+16. **The baseline depends on the delivery.** Both the batter's and the bowler's
     tables contain the same delivery effects (for example, yorkers hit the stumps
     more). Dividing by a delivery-specific baseline stops those effects being
     counted twice.
-23. **Independence.** Log5 assumes batter and bowler deviations combine without
+17. **Independence.** Log5 assumes batter and bowler deviations combine without
     interaction. A specific batter's weakness against a specific bowling style is
     not modelled.
-24. **Only two matchups are allowed:** Tendulkar vs Bumrah and Kohli vs Warne.
+18. **Only two matchups are allowed:** Tendulkar vs Bumrah and Kohli vs Warne.
 
 ## Bowling network
 
-15. **Structure** (`duel/bowling.py`): Pressure -> Length -> Line, and Pressure,
+19. **Structure** (`duel/bowling.py`): Pressure -> Length -> Line, and Pressure,
     Length, Line -> Outcome. Bowling type is fixed per bowler: Bumrah pace, Warne
     leg-spin, as listed on their Wikipedia profiles.
-16. **No line or length data exists.** `LENGTH_PRIOR` and `LINE_PRIOR` are
+20. **No line or length data exists.** `LENGTH_PRIOR` and `LINE_PRIOR` are
     **priors**. Bumrah bowls more yorkers as pressure rises. Warne bowls fuller and
     uses the leg-side line more than Bumrah.
-17. **Outcome rates are measured.** Each bowler's IPL rates by pressure use the same
+21. **Outcome rates are measured.** Each bowler's IPL rates by pressure use the same
     100-ball smoothing, `TEST_WEIGHT` and 50/50 dismissal mix as the batters. Risk is
     relative to the whole population, because a bowler faces all kinds of batter.
-18. **Career correction.** Test wicket risk per ball is multiplied by (Cricsheet
+22. **Career correction.** Test wicket risk per ball is multiplied by (Cricsheet
     bowling average / career bowling average). Cricsheet has Bumrah's full Test
     record to date, but Warne's Tests only from 2004 to 2007.
-19. **Run-outs stay in the outcome states** for the shared format, but they do not
+23. **Run-outs stay in the outcome states** for the shared format, but they do not
     count as the bowler's wickets in the career correction. Byes and leg byes are not
     charged to the bowler.
-20. **Small samples remain noisy.** Warne has 137 to 205 IPL balls per pressure group
+24. **Small samples remain noisy.** Warne has 137 to 205 IPL balls per pressure group
     and Bumrah 363 to 767. Neither bowler's wicket rate rises smoothly with pressure.
     For example, Warne's medium-pressure rate is above his low-pressure rate, and
     Bumrah's is below. This is kept rather than forced into a pattern.
