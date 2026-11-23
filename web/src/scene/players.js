@@ -3,9 +3,20 @@
 // root, setRunUp(f), setSwing(shot, f), reset(), update(dt).
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { closestToBlade } from "../sim/ball.js";
+import { moveWorld, reachFraction, reachTo, rotateWorld } from "./ik.js";
 
 // Every swing clip lasts SWING.time seconds and meets the ball SWING.lead seconds in.
 export const SWING = { lead: 0.4, time: 1.0 };
+const MAX_BAT_ADJUST = 0.55; // Metres the hands may move from the clip to meet the ball.
+const MAX_SHUFFLE = 0.24; // Metres the batter may shuffle across the crease to the line.
+const MAX_WRIST_TURN = THREE.MathUtils.degToRad(48); // How far the wrists may turn the bat.
+const BLADE = [0.36, 0.86]; // Hitting part of the bat, in metres from the top of the handle.
+const RECOVER_SECONDS = 0.3;
+const smooth = (x) => {
+  const t = Math.min(Math.max(x, 0), 1);
+  return t * t * (3 - 2 * t);
+};
 
 export const KIT = {
   tendulkar: { name: "TENDULKAR", number: 10, shirt: 0x1d4ed8, trim: 0xf59e0b, height: 1.65 },
@@ -86,11 +97,11 @@ async function loadRiggedBatter(id, source) {
   root.rotation.y = -Math.PI / 2;
   root.updateMatrixWorld(true);
 
-  const chest = model.getObjectByName("chest");
+  const chest = model.getObjectByName("spine_03");
   if (chest) {
     const print = backPrint(KIT[id]);
     print.scale.setScalar(0.8);
-    print.position.set(0, 1.25 * (KIT[id].height / 1.75), -0.145);
+    print.position.set(0, 1.24 * (KIT[id].height / 1.75), -0.16);
     print.rotation.y = Math.PI;
     root.add(print);
     root.updateMatrixWorld(true);
@@ -99,32 +110,159 @@ async function loadRiggedBatter(id, source) {
 
   const mixer = new THREE.AnimationMixer(model);
   const actions = Object.fromEntries(motion.animations.map((clip) => [clip.name, mixer.clipAction(clip)]));
-  let current = null;
-  const use = (action) => {
-    if (current === action) return;
-    current?.stop();
-    current = action;
-    action.play();
+  const idle = actions.idle;
+  const bat = model.getObjectByName("bat");
+  const sweet = model.getObjectByName("bat_sweet");
+  const arms = ["l", "r"].map((side) => {
+    const [upper, lower, hand] = ["upperarm", "lowerarm", "hand"].map((n) => model.getObjectByName(`${n}_${side}`));
+    return { upper, lower, hand };
+  });
+  const shoulder = new THREE.Vector3();
+  const wrist = new THREE.Vector3();
+  const elbow = new THREE.Vector3();
+  const move = new THREE.Vector3();
+  const top = new THREE.Vector3();
+  const tip = new THREE.Vector3();
+  const along = new THREE.Vector3();
+  const toBall = new THREE.Vector3();
+  const aimBall = new THREE.Vector3();
+  const full = new THREE.Quaternion();
+  const pivot = new THREE.Quaternion();
+  const reachOf = (arm) => {
+    arm.upper.getWorldPosition(shoulder);
+    arm.lower.getWorldPosition(elbow);
+    arm.hand.getWorldPosition(wrist);
+    return (shoulder.distanceTo(elbow) + elbow.distanceTo(wrist)) * 0.995;
   };
+
+  // Where each shot's sweet spot is at contact, before any adjustment to the ball.
+  idle.play();
+  const contacts = {};
+  for (const [name, action] of Object.entries(actions)) {
+    if (action === idle) continue;
+    idle.setEffectiveWeight(0);
+    action.play();
+    action.paused = true;
+    action.time = SWING.lead;
+    action.setEffectiveWeight(1);
+    mixer.update(0);
+    model.updateMatrixWorld(true);
+    const top = bat.getWorldPosition(new THREE.Vector3());
+    const along = sweet.getWorldPosition(new THREE.Vector3()).sub(top).normalize();
+    contacts[name] = BLADE.map((d) => top.clone().addScaledVector(along, d));
+    action.stop();
+  }
+  idle.setEffectiveWeight(1);
+  mixer.update(0);
+
+  let swing = null;
+  let recover = 0;
+  let aimOffset = null;
+  let shuffle = 0;
+  let shuffleNow = 0;
+  const homeX = root.position.x;
+  const setShuffle = (x) => {
+    shuffleNow = x;
+    root.position.x = homeX + x;
+    root.updateMatrixWorld(true);
+  };
+
+  function applyAim(f) {
+    setShuffle(shuffle * smooth(f / (SWING.lead / SWING.time)));
+    if (!aimOffset) return;
+    const strength = smooth((f - 0.08) / (SWING.lead / SWING.time - 0.08)) * (1 - smooth((f - 0.46) / 0.26));
+    if (strength <= 0) return;
+    model.updateMatrixWorld(true);
+    move.copy(aimOffset).multiplyScalar(strength);
+    let fraction = 1;
+    for (const arm of arms) {
+      const reach = reachOf(arm);
+      fraction = Math.min(fraction, reachFraction(shoulder, wrist, move, reach));
+    }
+    move.multiplyScalar(fraction);
+
+    // Whatever the hands cannot cover, the wrists cover by turning the bat towards the ball.
+    bat.getWorldPosition(top).add(move);
+    along.copy(sweet.getWorldPosition(tip)).sub(bat.getWorldPosition(wrist)).normalize();
+    toBall.copy(aimBall).sub(top).normalize();
+    full.setFromUnitVectors(along, toBall);
+    const angle = 2 * Math.acos(Math.min(Math.abs(full.w), 1));
+    const limit = angle > MAX_WRIST_TURN ? MAX_WRIST_TURN / angle : 1;
+    pivot.identity().slerp(full, limit * strength);
+
+    const targets = arms.map((arm) => arm.hand.getWorldPosition(new THREE.Vector3()).add(move).sub(top).applyQuaternion(pivot).add(top));
+    moveWorld(bat, move);
+    rotateWorld(bat, pivot);
+    arms.forEach((arm, i) => {
+      reachTo(arm.upper, arm.lower, arm.hand, targets[i]);
+      rotateWorld(arm.hand, pivot);
+    });
+  }
 
   return {
     root,
     rigged: true,
+    /**
+     * Steer this swing to the ball on `points`, using footwork first and then the hands.
+     * Returns where and when the ball is met, or null if this shot has no contact pose.
+     */
+    planContact(shot, points) {
+      const blade = contacts[shot];
+      const plan = blade && closestToBlade(points, blade[0], blade[1]);
+      if (!plan) return null;
+      const { ball, blade: spot } = plan;
+      shuffle = THREE.MathUtils.clamp(ball.x - spot.x, -MAX_SHUFFLE, MAX_SHUFFLE);
+      aimBall.set(ball.x, ball.y, ball.z);
+      aimOffset = new THREE.Vector3(ball.x - spot.x - shuffle, ball.y - spot.y, ball.z - spot.z);
+      if (aimOffset.length() > MAX_BAT_ADJUST) aimOffset.setLength(MAX_BAT_ADJUST);
+      return ball;
+    },
+    /** Play the next swing with no steering, for shots that miss. */
+    clearAim() {
+      aimOffset = null;
+      shuffle = 0;
+    },
     reset() {
-      use(actions.idle);
-      actions.idle.paused = false;
-      actions.idle.setLoop(THREE.LoopRepeat);
+      aimOffset = null;
+      shuffle = 0;
+      idle.paused = false;
+      idle.setLoop(THREE.LoopRepeat);
+      if (!idle.isRunning()) idle.play();
+      if (swing) recover = RECOVER_SECONDS;
+      else idle.setEffectiveWeight(1);
       mixer.update(0);
     },
     setSwing(shot, f) {
       const action = actions[shot] ?? actions.defend;
-      use(action);
+      if (swing !== action) {
+        swing?.stop();
+        swing = action;
+        action.play();
+      }
+      recover = 0;
       action.paused = true;
-      action.time = Math.min(f, 1) * action.getClip().duration;
+      action.time = Math.min(f, 0.999) * action.getClip().duration;
+      const weight = smooth(f / 0.12);
+      action.setEffectiveWeight(weight);
+      idle.setEffectiveWeight(1 - weight);
       mixer.update(0);
+      applyAim(f);
     },
     update(dt) {
-      if (current === actions.idle) mixer.update(dt);
+      if (recover > 0) {
+        recover -= dt;
+        const weight = smooth(Math.max(recover, 0) / RECOVER_SECONDS);
+        swing.setEffectiveWeight(weight);
+        idle.setEffectiveWeight(1 - weight);
+        setShuffle(shuffleNow * (recover > 0 ? 1 - Math.min(dt / recover, 1) : 0));
+        if (recover <= 0) {
+          swing.stop();
+          swing = null;
+        }
+        mixer.update(dt);
+      } else if (!swing) {
+        mixer.update(dt);
+      }
     },
   };
 }
@@ -167,6 +305,8 @@ function createCapsuleBatter(id) {
     root,
     reset() { pivot.rotation.set(0, 0, 0.12); },
     update() {},
+    planContact: () => null,
+    clearAim() {},
     setSwing(shot, f) {
       const [from, to] = SWINGS[shot] ?? SWINGS.defend;
       const windUp = Math.min(f / 0.45, 1);

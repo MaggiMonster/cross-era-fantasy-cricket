@@ -137,6 +137,39 @@ export function sampleAt(points, t) {
   return { t, x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, z: a.z + (b.z - a.z) * f };
 }
 
+/** Where and when the ball first reaches depth z, or null if it never does. */
+export function pointAtZ(points, z) {
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1];
+    const b = points[i];
+    if (a.z >= z && b.z <= z) {
+      const f = a.z === b.z ? 0 : (a.z - z) / (a.z - b.z);
+      return { t: a.t + (b.t - a.t) * f, x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, z };
+    }
+  }
+  return null;
+}
+
+/**
+ * The moment the ball passes closest to a straight blade from `a` to `b`.
+ * Returns the ball's position and time, and the nearest point on the blade.
+ */
+export function closestToBlade(points, a, b, minZ = -10, maxZ = -7.4) {
+  const ux = b.x - a.x;
+  const uy = b.y - a.y;
+  const uz = b.z - a.z;
+  const lengthSq = ux * ux + uy * uy + uz * uz;
+  let best = null;
+  for (const p of points) {
+    if (p.z < minZ || p.z > maxZ) continue;
+    const f = Math.min(Math.max(((p.x - a.x) * ux + (p.y - a.y) * uy + (p.z - a.z) * uz) / lengthSq, 0), 1);
+    const blade = { x: a.x + ux * f, y: a.y + uy * f, z: a.z + uz * f };
+    const distance = Math.hypot(p.x - blade.x, p.y - blade.y, p.z - blade.z);
+    if (!best || distance < best.distance) best = { ball: { t: p.t, x: p.x, y: p.y, z: p.z }, blade, distance };
+  }
+  return best;
+}
+
 // Placeholder direction for each shot (radians, 0 straight back past the bowler, + leg side).
 // Turn 7 replaces this with direction and distance driven by shot plus outcome.
 const SHOT_ANGLE = { defend: 0.1, work: 1.1, drive: -0.35, cut: -1.75, pull: 1.75, sweep: 2.1, loft: 0.15, leave: 0 };

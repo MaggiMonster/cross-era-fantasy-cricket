@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { BOWLERS, POPPING_Z, deliveryPath, placeholderHit, sampleAt } from "../src/sim/ball.js";
+import { BOWLERS, POPPING_Z, closestToBlade, deliveryPath, placeholderHit, pointAtZ, sampleAt } from "../src/sim/ball.js";
 
 const LENGTHS = ["yorker", "full", "good", "short", "bouncer"];
 const LINES = ["outside_off", "stumps", "leg"];
@@ -49,6 +49,22 @@ test("sampling interpolates along the path", () => {
   const p = path("bumrah", "good");
   const q = sampleAt(p.points, p.crease.t);
   assert.ok(Math.abs(q.z - POPPING_Z) < 0.1);
+});
+
+test("pointAtZ finds the ball at a depth, and null past the end of the path", () => {
+  const p = path("bumrah", "good");
+  const q = pointAtZ(p.points, POPPING_Z + 0.5);
+  assert.equal(q.z, POPPING_Z + 0.5);
+  assert.ok(q.t < p.crease.t);
+  assert.equal(pointAtZ(p.points, -100), null);
+});
+
+test("closestToBlade finds where the ball passes nearest the bat", () => {
+  const points = [-7, -8, -9, -10].map((z, i) => ({ t: i, x: 0, y: 0.5, z }));
+  const hit = closestToBlade(points, { x: 0.2, y: 0.2, z: -9 }, { x: 0.2, y: 0.8, z: -9 });
+  assert.equal(hit.ball.z, -9);
+  assert.ok(Math.abs(hit.blade.y - 0.5) < 1e-9);
+  assert.ok(Math.abs(hit.distance - 0.2) < 1e-9);
 });
 
 test("placeholder hit: bowled reaches the stumps, a leave is not hit", () => {
