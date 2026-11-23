@@ -61,7 +61,10 @@ copyrighted match footage.
 - **Tendulkar review: priors not changed.** He and Bumrah are both below the IPL average, so
   a matchup should fall below both. `docs/validation.md` now shows that expected value, and
   the reasoning is in `docs/assumptions.md`, items 41 to 43.
-- Schema is now `1.4` for the player API change. No shared types changed.
+- **Leaving the ball now depends on line and length.** Leaving a straight full ball is high
+  risk, a leave cannot score, and the rule is in `duel/matchup.py` and `web/src/model/duel.js`
+  (`docs/assumptions.md`, items 46 to 50). Jaivin: this touches your Turn 2 matchup model.
+- Schema is now `1.5`. No shared types changed.
 
 ## Next: finish Turn 5 - Apurva
 
@@ -80,7 +83,7 @@ Turn 6 (Jaivin) then builds Bumrah and Warne from the signature specs.
   verified. Bought packs may not be allowed in a publicly deployed browser game.
 - **Scripted shots** are technique-based keyframes, not motion capture of the real players.
 - **Validation differences.** Tendulkar vs Bumrah is below both players' IPL rates, which is
-  expected. Kohli vs Warne has dots below both, and its runs are 0.037 above expectation.
+  expected. Kohli vs Warne has dots below both, and its runs are 0.036 above expectation.
 - **Bowler labels need a human check.** Tick the lists in `docs/validation.md`. Look closely
   at BAW Mendis, a mystery spinner labelled finger spin.
 - **The 3D game was checked in headless Chrome** with software rendering and fixed time
