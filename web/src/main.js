@@ -2,20 +2,26 @@
 // URL options: ?matchup=kohli-warne&seed=1&auto=1&overs=3&lives=3
 // &frames=N advances N fixed 1/60 s steps and then holds, for automated checks and screenshots.
 // &motion=scripted picks the animation source. &pose=drive:0.4 holds a close-up of one shot.
-// &closeup=1 plays the game from a camera beside the batter.
+// &closeup=1 starts in the close view. The C key switches views at any time.
 import * as THREE from "three";
 import { Duel, Networks, mulberry32 } from "./model/duel.js";
 import { SHOTS, shotForKey } from "./controls.js";
+import { clipFor } from "./shots.js";
 import { createBatter, createBowler, KIT, SWING } from "./scene/players.js";
 import { buildStadium } from "./scene/stadium.js";
 import { deliveryPath, placeholderHit, sampleAt, BALL_RADIUS } from "./sim/ball.js";
 
 const RUN_UP_SECONDS = { bumrah: 1.7, warne: 1.05 };
-const BROADCAST = { position: new THREE.Vector3(0.7, 8.6, 44), target: new THREE.Vector3(0, -0.9, 2.5), fov: 21 };
+// Each view has a wide framing before the ball and a tight one by the time it is bowled.
+const shotView = (px, py, pz, tx, ty, tz, fov) => ({ position: new THREE.Vector3(px, py, pz), target: new THREE.Vector3(tx, ty, tz), fov });
+const CLOSE = shotView(-6.2, 1.45, -7.4, 0.05, 0.55, -8.75, 34);
+const VIEWS = {
+  normal: { wide: shotView(1.2, 4.8, 33, 0, -0.55, -1.5, 19), tight: shotView(1.4, 3.4, 22, 0, 0.35, -5, 15) },
+  close: { wide: CLOSE, tight: CLOSE },
+};
 const LABEL = { outside_off: "outside off", stumps: "on the stumps", leg: "down leg", run_out: "run out" };
 
 const params = new URLSearchParams(location.search);
-if (params.has("closeup")) Object.assign(BROADCAST, { position: new THREE.Vector3(-6.2, 1.45, -7.4), target: new THREE.Vector3(0.05, 0.55, -8.75), fov: 34 });
 const [batterId, bowlerId] = (params.get("matchup") ?? "tendulkar-bumrah").split("-");
 const auto = params.get("auto") === "1";
 const seedParam = params.get("seed");
@@ -45,10 +51,19 @@ async function start() {
 
   const renderer = setupRenderer();
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(BROADCAST.fov, innerWidth / innerHeight, 0.1, 900);
-  camera.position.copy(BROADCAST.position);
-  const look = BROADCAST.target.clone();
-  camera.lookAt(look);
+  let view = params.has("closeup") ? "close" : "normal";
+  let push = 0;
+  const camera = new THREE.PerspectiveCamera(VIEWS[view].wide.fov, innerWidth / innerHeight, 0.1, 900);
+  const look = new THREE.Vector3();
+  function applyView() {
+    const { wide, tight } = VIEWS[view];
+    camera.position.lerpVectors(wide.position, tight.position, push);
+    look.lerpVectors(wide.target, tight.target, push);
+    camera.fov = wide.fov + (tight.fov - wide.fov) * push;
+    camera.updateProjectionMatrix();
+    camera.lookAt(look);
+  }
+  applyView();
 
   const { striker } = buildStadium(scene);
   const batter = await createBatter(batterId, params.get("motion") ?? "scripted");
@@ -96,8 +111,8 @@ async function start() {
     striker.reset();
     ball.visible = false;
     ballView = null;
-    camera.position.copy(BROADCAST.position);
-    look.copy(BROADCAST.target);
+    push = 0;
+    applyView();
     const d = duel.nextDelivery();
     $("delivery").textContent = `Next ball: ${d.bowl_type}, ${d.length}, ${LABEL[d.line]}`;
     $("result").textContent = "";
@@ -115,9 +130,10 @@ async function start() {
     const path = deliveryPath(bowlerId, delivery, jitter);
     // When the bat connects, the swing is steered to the ball and timed to meet it there.
     const connects = result.shot !== "leave" && !["bowled", "lbw", "stumped"].includes(result.outcome);
+    const clip = clipFor(result.shot, delivery.length);
     if (!connects) batter.clearAim();
-    const contact = (connects && batter.planContact(result.shot, path.points)) || path.crease;
-    ballView = { result, path, contact, hit: null, hitAt: 0 };
+    const contact = (connects && batter.planContact(clip, path.points)) || path.crease;
+    ballView = { result, clip, path, contact, hit: null, hitAt: 0 };
     $("shots").classList.add("locked");
     phase = "runup";
     clock = 0;
@@ -153,14 +169,15 @@ async function start() {
     if (phase === "runup") {
       const f = Math.min(clock / RUN_UP_SECONDS[bowlerId], 1);
       bowler.setRunUp(f);
+      push = f * f * (3 - 2 * f);
       if (f >= 1) { phase = "flight"; clock = 0; ball.visible = true; }
     }
     if (phase === "flight") {
-      const { path, result, contact } = ballView;
+      const { path, result, clip, contact } = ballView;
       bowler.followThrough(Math.min(clock / 0.8, 1));
       placeBall(sampleAt(path.points, clock));
       const swingStart = contact.t - SWING.lead;
-      if (clock > swingStart) batter.setSwing(result.shot, Math.min((clock - swingStart) / SWING.time, 1));
+      if (clock > swingStart) batter.setSwing(clip, Math.min((clock - swingStart) / SWING.time, 1));
       if (clock >= contact.t) {
         ballView.hit = placeholderHit(contact, result.shot, result.outcome);
         showResult();
@@ -168,30 +185,34 @@ async function start() {
         clock = 0;
       }
     } else if (phase === "past") {
-      const { path, result, contact } = ballView;
+      const { path, result, clip, contact } = ballView;
       const t = contact.t + clock;
       placeBall(sampleAt(path.points, t));
-      batter.setSwing(result.shot, Math.min((clock + SWING.lead) / SWING.time, 1));
+      batter.setSwing(clip, Math.min((clock + SWING.lead) / SWING.time, 1));
       if (result.outcome === "stumped" || result.outcome === "bowled") striker.knock(Math.min(clock / 0.3, 1));
       if (clock > 1.25) finishBall();
     } else if (phase === "hit") {
-      const { hit, result } = ballView;
-      batter.setSwing(result.shot, Math.min((clock + SWING.lead) / SWING.time, 1));
+      const { hit, result, clip } = ballView;
+      batter.setSwing(clip, Math.min((clock + SWING.lead) / SWING.time, 1));
       placeBall(sampleAt(hit, clock));
       const end = hit[hit.length - 1].t;
       if (result.outcome === "bowled" || result.outcome === "run_out") striker.knock(Math.min(Math.max(clock - (result.outcome === "bowled" ? end : 0.5), 0) / 0.32, 1));
-      if (hit.length > 2 && !params.has("closeup")) {
+      if (hit.length > 2 && view === "normal") {
         look.lerp(ball.position, 1 - Math.exp(-dt * 3.2));
         camera.fov += (34 - camera.fov) * (1 - Math.exp(-dt * 2));
         camera.updateProjectionMatrix();
       }
-      if (clock > end + 0.95) {
-        camera.fov = BROADCAST.fov;
-        camera.updateProjectionMatrix();
-        finishBall();
-      }
+      if (clock > end + 0.95) finishBall();
     }
-    camera.lookAt(look);
+    const following = phase === "hit" && view === "normal" && ballView.hit.length > 2;
+    if (following) camera.lookAt(look);
+    else applyView();
+  }
+
+  function switchView() {
+    view = view === "normal" ? "close" : "normal";
+    $("view").textContent = view === "normal" ? "Close view (C)" : "Normal view (C)";
+    applyView();
   }
 
   addEventListener("resize", () => {
@@ -214,9 +235,12 @@ async function start() {
       playBall(chosen);
     }
     if (event.code === "Space") { event.preventDefault(); playBall(null); }
+    if (event.key.toLowerCase() === "c" && !event.metaKey && !event.ctrlKey) switchView();
     if (event.key.toLowerCase() === "r" && phase === "over") newDuel();
   });
   $("again").addEventListener("click", newDuel);
+  $("view").addEventListener("click", (event) => { switchView(); event.currentTarget.blur(); });
+  $("view").textContent = view === "normal" ? "Close view (C)" : "Normal view (C)";
   for (const link of document.querySelectorAll("[data-matchup]")) {
     link.classList.toggle("active", link.dataset.matchup === `${batterId}-${bowlerId}`);
   }

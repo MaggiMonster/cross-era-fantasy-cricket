@@ -18,6 +18,7 @@
     #matchups { position: fixed; top: 16px; right: 16px; display: flex; gap: 4px; background: var(--panel); padding: 4px; border-radius: 8px; }
     #matchups a { color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 5px; font-size: 13px; }
     #matchups a.active { background: #1e3a5f; color: var(--ink); }
+    #view { padding: 6px 10px; font-size: 13px; text-transform: none; white-space: nowrap; }
     #bottom { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); width: min(820px, calc(100vw - 32px)); display: grid; gap: 8px; justify-items: center; }
     #call { background: var(--panel); padding: 7px 16px; border-radius: 8px; text-align: center; }
     #result { font-weight: 800; font-size: 19px; }
@@ -57,11 +58,12 @@
   <nav id="matchups" aria-label="Matchup">
     <a data-matchup="tendulkar-bumrah" href="?matchup=tendulkar-bumrah">Sachin v Bumrah</a>
     <a data-matchup="kohli-warne" href="?matchup=kohli-warne">Kohli v Warne</a>
+    <button id="view" type="button"></button>
   </nav>
   <section id="bottom">
     <div id="call" aria-live="polite"><div id="result"></div><div id="delivery"></div></div>
     <div id="shots" role="group" aria-label="Choose a shot"></div>
-    <div id="hint">Arrows: ↑ drive, ↓ defend, ← cut, → work. With Shift: loft, sweep, leave, pull. Keys 1-8 also work. Space lets the batting network choose. Data: Cricsheet, CC BY 4.0.</div>
+    <div id="hint">Arrows: ↑ drive, ↓ defend, ← cut, → work. With Shift: loft, sweep, leave, pull. Keys 1-8 also work. Space lets the batting network choose. C switches view. Data: Cricsheet, CC BY 4.0.</div>
   </section>
   <div id="banner" hidden>
     <div id="banner-title"></div>
