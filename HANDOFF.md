@@ -2,7 +2,8 @@
 
 ## Whose turn is it?
 
-**Next turn: Turn 5 - Apurva** (folder `~/cricket-project/project-me`)
+**Current turn: Turn 5 - Apurva, still in progress** (folder `~/cricket-project/project-me`).
+It is waiting on Apurva for face photos and a decision on animation packs.
 
 The plan changed on 2026-11-23 to a 3D browser game in Three.js. The Bayesian networks,
 match engine and Pygame game stay as a working fallback. The older video-generation
@@ -14,7 +15,7 @@ handoff is in `archive/docs/HANDOFF-old-scope.md`.
 | 2 | Jaivin | Bowling networks, combined outcome model | done (2026-11-23) |
 | 3 | Apurva | Match engine, Pygame screen, batting controls, pace-vs-spin adjustment | done (2026-11-23) |
 | 4 | Jaivin | Three.js scaffold, ball physics, JS sampler, capsule players, validation, asset research | done (2026-11-23) |
-| 5 | Apurva | Character pipeline, Sachin and Kohli, eight batting shots, 3D batting controls | **next** |
+| 5 | Apurva | Character pipeline, Sachin and Kohli, eight batting shots, 3D batting controls | **in progress** (faces remain) |
 | 6 | Jaivin | Bumrah and Warne, bowling actions and controls, auto mode, character select | planned |
 | 7 | Apurva | Shot direction and distance, fielders, replays, camera cuts, final docs, demo | planned |
 
@@ -40,37 +41,46 @@ handoff is in `archive/docs/HANDOFF-old-scope.md`.
 - Node.js was installed with Homebrew. `~/cricket-project/assets/` and `SOURCES.md` exist.
 - Schema is now `1.3`, with no change to the shared types. 83 tests pass.
 
-## Motion capture plan (decided 2026-11-23)
+## Motion and face plan (decided 2026-11-23)
 
-1. **Start with DeepMotion Animate 3D** to get working animations quickly. Apurva creates
-   the account and uploads the clips personally. Steps are in `docs/asset-pipeline.md`.
-2. **Keep the pipeline independent of the source.** Every tool's output goes to
-   `raw/<source>/<action>/` and is retargeted to `animations/<source>/<action>.glb` on the
-   same rig. The game code must not depend on which tool produced a file.
-3. **Later, run the same master clips through ExMR** on Apurva's RTX 4060 (Windows, via
-   WSL) and compare them side by side with DeepMotion on the same rig and camera.
+**DeepMotion and ExMR are no longer the main plan.** We will not film ourselves or use
+copyrighted match footage.
 
-## Next: Turn 5 - Apurva
+1. **Faces:** KeenTools FaceBuilder. The photo checklist is in `docs/asset-pipeline.md`.
+2. **Motion:** a ready-made cricket pack if Apurva approves one, otherwise scripted Blender
+   keyframes. Mixamo may supply generic running. Nothing is bought without asking.
+3. **Signature touches** for all four players are in `docs/asset-pipeline.md`.
 
-1. Run `git pull`, then `cd web && npm install`.
-2. Settle the two open decisions below.
-3. Build the base rigged body, face method and kit, then Sachin and Kohli.
-4. Capture the eight batting shots with DeepMotion and retarget them through the pipeline.
-5. Add 3D batting controls. Replace the capsules in `web/src/scene/players.js`, keeping
-   `root`, `reset` and `setSwing`.
+## Turn 5 - Apurva - done so far
+
+- Blender 5.3 installed. `pipeline/build_batter.py` builds Sachin and Kohli with a rig, kit,
+  pads, helmet, bat, an idle clip and all eight batting shots.
+- The game loads them from `~/cricket-project/assets/`, which is **not in git**. Jaivin's
+  folder shares those files. If they are missing, the game falls back to capsules.
+- 3D batting controls: arrows, Shift plus arrows, and keys 1-8.
+- **Tendulkar review: priors not changed.** He and Bumrah are both below the IPL average, so
+  a matchup should fall below both. `docs/validation.md` now shows that expected value, and
+  the reasoning is in `docs/assumptions.md`, items 41 to 43.
+- Schema is now `1.4` for the player API change. No shared types changed.
+
+## Next: finish Turn 5 - Apurva
+
+1. Collect 6 to 8 photos each for Sachin and Kohli, using the checklist.
+2. Install FaceBuilder, export one test head to `.glb`, then build both heads.
+3. Decide whether to buy an animation pack. Check its shot list and licence first.
+4. Play on the Mac and judge the feel of the shots.
+
+Turn 6 (Jaivin) then builds Bumrah and Warne from the signature specs.
 
 ## Blockers and open questions
 
-- **Face method is undecided.** Recommendation: KeenTools FaceBuilder's 15-day free trial.
-- **Clip source is undecided.** Open clips of Bumrah or Warne bowling and Tendulkar batting
-  were not found, and there is only one short Kohli clip. Options: film ourselves
-  (recommended), Creative Commons club clips, or both.
-- **Blender is not installed.** Turn 5 needs it for rigging and retargeting.
-- **DeepMotion limits.** The free tier gives 60 credits a month. Some button labels could
-  not be confirmed. Its terms allow processing uploads to improve its services.
-- **Validation differences.** Tendulkar vs Bumrah has runs and boundaries below both
-  players' real IPL rates, and dots above both. Kohli vs Warne has dots below both. Line,
-  length and shot choice are still priors, so these may need tuning.
+- **Faces are placeholders** until FaceBuilder is installed. Its glTF export and Blender 5.3
+  support are not yet tested. The 15-day trial covers all four heads.
+- **No animation pack is approved.** CGTrader and TurboSquid details could not be fully
+  verified. Bought packs may not be allowed in a publicly deployed browser game.
+- **Scripted shots** are technique-based keyframes, not motion capture of the real players.
+- **Validation differences.** Tendulkar vs Bumrah is below both players' IPL rates, which is
+  expected. Kohli vs Warne has dots below both, and its runs are 0.037 above expectation.
 - **Bowler labels need a human check.** Tick the lists in `docs/validation.md`. Look closely
   at BAW Mendis, a mystery spinner labelled finger spin.
 - **The 3D game was checked in headless Chrome** with software rendering and fixed time
