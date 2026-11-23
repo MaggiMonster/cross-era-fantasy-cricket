@@ -202,6 +202,10 @@ bowler is labelled:
 52. **The bat is steered to the ball at run time** with footwork (up to 24 cm across the crease),
     the hands (up to 55 cm) and the wrists (up to 48 degrees). These limits are **priors**.
 53. **Measured contact.** Over 7 shots, 15 deliveries and both matchups, the blade comes
-    within 12 cm of the ball in 183 of 210 cases. Most other cases are poor shot choices for
-    the ball, such as a pull to a yorker, where the worst gap is 58 cm.
+    within 12 cm of the ball in 176 of 210 cases, with both hands kept on the handle. Most
+    other cases are poor shot choices for the ball, and the worst gap is 49 cm.
 54. **This is presentation only.** Steering never changes the probabilities.
+55. **Footwork versions are chosen by length.** Short balls and bouncers use back-foot defend,
+    work and drive. Yorkers and full balls use front-foot cut and pull. This is a **prior**.
+56. **The planted foot stays still** during the swing (measured drift under 1 cm). The batter
+    still resets to the stance between balls.

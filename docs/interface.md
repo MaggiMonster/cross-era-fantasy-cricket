@@ -1,6 +1,6 @@
 # Interface: how the batting and bowling halves connect
 
-- **Schema version:** `1.6`
+- **Schema version:** `1.7`
 - **Reference implementation:** `duel/types.py`
 - Change this file only together with `duel/types.py`, and bump `SCHEMA_VERSION`.
 
@@ -127,6 +127,8 @@ in `web/src/scene/players.js` by keeping `root`, `reset`, `update(dt)`, `setSwin
 at `SWING.lead` seconds. `createBatter` is async and falls back to a capsule.
 Before a swing that connects, `planContact(shot, points)` steers it to the ball and returns
 where and when they meet (null on a capsule). `clearAim()` plays a swing that misses.
+`clipFor(shot, length)` in `web/src/shots.js` picks the front-foot or back-foot clip, and that
+clip name is what `planContact` and `setSwing` receive.
 
 ```sh
 cd web && npm install && npm run dev   # http://127.0.0.1:5173
