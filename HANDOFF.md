@@ -2,8 +2,8 @@
 
 ## Whose turn is it?
 
-**Current turn: Turn 5 - Apurva, still in progress** (folder `~/cricket-project/project-me`).
-It is waiting on Apurva for face photos and a decision on animation packs.
+**Next turn: Turn 6 - Jaivin** (folder `~/cricket-project/project-friend`).
+Turn 5 is closed with faces pending. They will be built for all four players together.
 
 The plan changed on 2026-11-23 to a 3D browser game in Three.js. The Bayesian networks,
 match engine and Pygame game stay as a working fallback. The older video-generation
@@ -15,8 +15,8 @@ handoff is in `archive/docs/HANDOFF-old-scope.md`.
 | 2 | Jaivin | Bowling networks, combined outcome model | done (2026-11-23) |
 | 3 | Apurva | Match engine, Pygame screen, batting controls, pace-vs-spin adjustment | done (2026-11-23) |
 | 4 | Jaivin | Three.js scaffold, ball physics, JS sampler, capsule players, validation, asset research | done (2026-11-23) |
-| 5 | Apurva | Character pipeline, Sachin and Kohli, eight batting shots, 3D batting controls | **in progress** (faces remain) |
-| 6 | Jaivin | Bumrah and Warne, bowling actions and controls, auto mode, character select | planned |
+| 5 | Apurva | Character pipeline, Sachin and Kohli, eight batting shots, 3D batting controls | done (2026-11-23), faces pending |
+| 6 | Jaivin | Bumrah and Warne, bowling actions and controls, auto mode, character select | **next** |
 | 7 | Apurva | Shot direction and distance, fielders, replays, camera cuts, final docs, demo | planned |
 
 ## Earlier turns
@@ -51,7 +51,7 @@ copyrighted match footage.
    keyframes. Mixamo may supply generic running. Nothing is bought without asking.
 3. **Signature touches** for all four players are in `docs/asset-pipeline.md`.
 
-## Turn 5 - Apurva - done so far
+## Turn 5 - Apurva - done
 
 - Blender 5.3 installed. `pipeline/build_batter.py` builds Sachin and Kohli with a rig, kit,
   pads, helmet, bat, an idle clip and all eight batting shots.
@@ -71,22 +71,32 @@ copyrighted match footage.
 - **Camera and footwork.** The normal view starts wide and pushes in over the bowler's shoulder.
   The C key switches to the close view. Shots have front-foot and back-foot versions, and the
   planted foot no longer slides.
-- Photo folders exist at `~/cricket-project/assets/photos/tendulkar/` and `kohli/`.
+- **Photos are ready for both batters** in `~/cricket-project/assets/photos/tendulkar/` (8) and
+  `kohli/` (7), with sources in `SOURCES.md`. Neither set has a true side profile, and most
+  heads are under the 500-pixel target.
+- Apurva reports the professor allows any photos for this private project. Keep photos, heads
+  and any demo showing the faces out of public places.
 - Schema is now `1.7` for the player API. No shared types changed.
 
-## Next: finish Turn 5 - Apurva
+## Next: Turn 6 - Jaivin
 
-1. Collect 6 to 8 photos each for Sachin and Kohli, using the checklist.
-2. Install FaceBuilder, export one test head to `.glb`, then build both heads.
-3. Decide whether to buy an animation pack. Check its shot list and licence first.
-4. Play on the Mac and judge the feel of the shots.
+1. Run `git pull`, then `cd web && npm install`.
+2. Collect 6 to 8 photos each of Bumrah and Warne in `~/cricket-project/assets/photos/bumrah/`
+   and `warne/`, and log them in `SOURCES.md`. Wikimedia rate-limits fast automated downloads,
+   so go slowly or save them in a browser.
+3. Build Bumrah and Warne on the MPFB pipeline, reusing `pipeline/build_batter.py`.
+4. Add their bowling actions from the signature specs in `docs/asset-pipeline.md`.
+5. Add bowling controls, auto mode and the character-select menu.
 
-Turn 6 (Jaivin) then builds Bumrah and Warne from the signature specs.
+**Faces, once all four photo sets exist:** install FaceBuilder, export one test head to `.glb`,
+then build all four inside the 15-day trial. Do not start the trial before then.
 
 ## Blockers and open questions
 
 - **Faces are placeholders** until FaceBuilder is installed. Its glTF export and Blender 5.3
   support are not yet tested. The 15-day trial covers all four heads.
+- **Shot quality still needs a person's judgement.** The blade reaches within 12 cm of the ball
+  in 176 of 210 shot and delivery combinations. Poor shot choices can still visibly miss.
 - **No animation pack is approved.** CGTrader and TurboSquid details could not be fully
   verified. Bought packs may not be allowed in a publicly deployed browser game.
 - **Scripted shots** are technique-based keyframes, not motion capture of the real players.
