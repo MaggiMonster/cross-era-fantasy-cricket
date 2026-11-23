@@ -4,6 +4,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { closestToBlade } from "../sim/ball.js";
+import { plantedFoot } from "../shots.js";
 import { moveWorld, reachFraction, reachTo, rotateWorld } from "./ik.js";
 
 // Every swing clip lasts SWING.time seconds and meets the ball SWING.lead seconds in.
@@ -117,6 +118,12 @@ async function loadRiggedBatter(id, source) {
     const [upper, lower, hand] = ["upperarm", "lowerarm", "hand"].map((n) => model.getObjectByName(`${n}_${side}`));
     return { upper, lower, hand };
   });
+  const legs = Object.fromEntries(["l", "r"].map((side) => {
+    const [upper, lower, foot] = ["thigh", "calf", "foot"].map((n) => model.getObjectByName(`${n}_${side}`));
+    return [side, { upper, lower, foot }];
+  }));
+  const footAt = new THREE.Vector3();
+  const slip = new THREE.Vector3();
   const shoulder = new THREE.Vector3();
   const wrist = new THREE.Vector3();
   const elbow = new THREE.Vector3();
@@ -167,8 +174,19 @@ async function loadRiggedBatter(id, source) {
     root.updateMatrixWorld(true);
   };
 
-  function applyAim(f) {
+  /** The body shuffles across the crease, but the planted foot stays where it is on the ground. */
+  function lockFoot(clip) {
+    if (!shuffleNow) return;
+    const leg = legs[plantedFoot(clip)];
+    model.updateMatrixWorld(true);
+    leg.foot.getWorldPosition(footAt);
+    footAt.x -= shuffleNow;
+    reachTo(leg.upper, leg.lower, leg.foot, footAt);
+  }
+
+  function applyAim(f, clip) {
     setShuffle(shuffle * smooth(f / (SWING.lead / SWING.time)));
+    lockFoot(clip);
     if (!aimOffset) return;
     const strength = smooth((f - 0.08) / (SWING.lead / SWING.time - 0.08)) * (1 - smooth((f - 0.46) / 0.26));
     if (strength <= 0) return;
@@ -193,10 +211,19 @@ async function loadRiggedBatter(id, source) {
     const targets = arms.map((arm) => arm.hand.getWorldPosition(new THREE.Vector3()).add(move).sub(top).applyQuaternion(pivot).add(top));
     moveWorld(bat, move);
     rotateWorld(bat, pivot);
+    arms.forEach((arm, i) => reachTo(arm.upper, arm.lower, arm.hand, targets[i]));
+
+    // If an arm could not stretch far enough, bring the bat back so both hands stay on it.
+    slip.set(0, 0, 0);
     arms.forEach((arm, i) => {
-      reachTo(arm.upper, arm.lower, arm.hand, targets[i]);
-      rotateWorld(arm.hand, pivot);
+      arm.hand.getWorldPosition(wrist).sub(targets[i]);
+      if (wrist.lengthSq() > slip.lengthSq()) slip.copy(wrist);
     });
+    if (slip.lengthSq() > 1e-8) {
+      moveWorld(bat, slip);
+      arms.forEach((arm, i) => reachTo(arm.upper, arm.lower, arm.hand, targets[i].add(slip)));
+    }
+    arms.forEach((arm) => rotateWorld(arm.hand, pivot));
   }
 
   return {
@@ -246,7 +273,7 @@ async function loadRiggedBatter(id, source) {
       action.setEffectiveWeight(weight);
       idle.setEffectiveWeight(1 - weight);
       mixer.update(0);
-      applyAim(f);
+      applyAim(f, shot);
     },
     update(dt) {
       if (recover > 0) {
@@ -308,7 +335,7 @@ function createCapsuleBatter(id) {
     planContact: () => null,
     clearAim() {},
     setSwing(shot, f) {
-      const [from, to] = SWINGS[shot] ?? SWINGS.defend;
+      const [from, to] = SWINGS[shot.split("_")[0]] ?? SWINGS.defend;
       const windUp = Math.min(f / 0.45, 1);
       const through = Math.max((f - 0.45) / 0.55, 0);
       pivot.rotation.z = 0.12 + (from - 0.12) * windUp + (to - from) * through * through * (3 - 2 * through);
