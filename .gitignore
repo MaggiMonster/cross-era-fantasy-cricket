@@ -42,3 +42,14 @@ outputs/
 .DS_Store
 .vscode/
 .idea/
+
+# Web game
+node_modules/
+web/dist/
+
+# Player assets live in ~/cricket-project/assets, never in git
+web/public/player-assets/
+*.glb
+*.gltf
+*.fbx
+*.blend

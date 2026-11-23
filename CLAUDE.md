@@ -1,7 +1,8 @@
 # Cross-Era Cricket Duel
 
-Two-person university project. A 2D 1-vs-1 cricket game where famous batsmen and
-bowlers are Bayesian networks learned from real data. Old era: Sachin Tendulkar,
+Two-person university project. A 3D browser 1-vs-1 cricket game (Three.js) where
+famous batsmen and bowlers are Bayesian networks learned from real data. The 2D
+Pygame game stays as a working fallback. Old era: Sachin Tendulkar,
 Shane Warne. New era: Virat Kohli, Jasprit Bumrah. Matchups are always old vs new:
 Sachin vs Bumrah, Kohli vs Warne.
 
@@ -16,8 +17,26 @@ Modes: human bats, human bowls, auto.
 
 ## Hard limits
 
-- Python, pgmpy for the networks, Pygame for a simple 2D side-on view.
+- Python and pgmpy for the networks. Three.js in the browser for the 3D game.
+  Pygame remains as the fallback. Do not delete the networks, engine or Pygame game.
+- The same Bayesian networks decide every ball: their tables are exported to JSON
+  and sampled in JavaScript, and a test proves the JS sampler matches Python.
 - Must run on one MacBook Air M4, 16 GB RAM, no GPU, shared by both contributors.
+  An RTX 4060 can be arranged for offline asset steps if needed.
+
+## Asset rules
+
+- Player photos, generated face/head models and source video clips stay OUT of git,
+  in `~/cricket-project/assets/` (shared by both folders). The repo documents how
+  they are loaded. Every photo and clip is recorded in
+  `~/cricket-project/assets/SOURCES.md`.
+- Never upload photos or videos to an online service, create accounts, or pay for
+  anything without asking first. Prefer free local tools, such as Blender driven by
+  Python. If a step truly needs a website (e.g. Mixamo), stop and give exact clicks.
+- Prefer openly licensed clips. Do not download from YouTube or broadcast sites. If
+  good clips are missing for a shot or action, report which ones.
+- Motion capture and face methods are chosen by both contributors. MediaPipe is
+  only a fallback.
 
 ## Data rules
 
@@ -51,10 +70,22 @@ running in decides who the current person is.
 - **Turn 3 - Apurva:** match engine (overs, lives, target, ball-by-ball sampling);
   Pygame screen with pitch, batsman sprite and shot animations, batting controls,
   scoreboard.
-- **Turn 4 - Jaivin:** bowler run-up and ball path that depends on length and line,
-  bowling controls, auto mode, matchup menu; validation that simulates 1000 duels
-  per matchup and compares results to the players' real numbers, in
-  `docs/validation.md`.
+- **Turn 4 - Jaivin:** Three.js scaffold (stadium, pitch, broadcast camera,
+  lighting); ball physics per delivery type; JSON export of the networks, JS sampler
+  and matching test; placeholder capsule players, playable end to end; 1000-duel
+  validation in `docs/validation.md`, with the 20 bowlers each batsman faced most and
+  their pace/finger-spin/wrist-spin labels; research and recommendation for motion
+  capture and face methods (ask before choosing).
+- **Turn 5 - Apurva:** character pipeline (base rigged body, chosen face method,
+  kit); Sachin and Kohli characters; motion capture for all eight batting shots;
+  batting controls in 3D.
+- **Turn 6 - Jaivin:** Bumrah and Warne characters with the same pipeline; their
+  bowling actions; bowling controls, auto mode, and a menu with character select
+  showing the faces.
+- **Turn 7 - Apurva:** ball direction and distance driven by shot plus outcome,
+  fielders, close-up replays and camera cuts; final docs and a short demo recording.
+
+Player kit numbers: Sachin 10, Kohli 18, Bumrah 93, Warne 23.
 
 ## Rules (apply to every session)
 
@@ -78,10 +109,15 @@ running in decides who the current person is.
 - `duel/types.py` - shared types. `docs/interface.md` is the contract; change them
   together and bump `SCHEMA_VERSION`.
 - `duel/cricsheet.py` - download and parse. `duel/career.py` - career stats.
-- `duel/batting.py` - batting networks.
+- `duel/batting.py` - batting networks. `duel/bowling.py`, `duel/matchup.py`,
+  `duel/engine.py` - bowling, combined outcome, match engine. `duel/game.py` - Pygame.
+- `duel/export_web.py` - writes the network tables to `web/public/data/networks.json`.
+- `duel/validate.py` - the 1000-duel validation.
+- `web/` - the Three.js game. `docs/asset-pipeline.md` - motion and face research.
 - `archive/` - old video-generation scope; do not extend it.
 - Run everything from the repo root, using the venv at `.venv`:
   - setup: `/opt/homebrew/bin/python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt`
   - tests: `.venv/bin/python -m pytest tests -q`
   - rebuild data: `.venv/bin/python -m duel.cricsheet`
+  - 3D game: `cd web && npm install && npm run dev`
 - Raw data, `outputs/` and venvs are git-ignored; never commit them.
