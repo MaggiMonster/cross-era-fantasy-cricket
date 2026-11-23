@@ -65,7 +65,7 @@ restarted. The old Turn 4 (video generation) is cancelled. The old handoff is in
 - No blockers.
 - **Bowler labels are unchecked.** The 294 pace/spin labels come from general cricket
   knowledge and need a spot check.
-- **The pace-vs-spin effect is small and relative.** It changes wicket risk by 5% to 7%
+- **The pace-vs-spin effect is small and relative.** It lowers wicket risk by about 7%
   in the real matchups and barely changes runs. With two batsmen, their effects mirror
   each other.
 - **Line, length and shot choice are priors**, for both batters and bowlers, so they

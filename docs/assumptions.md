@@ -121,7 +121,7 @@ bowler is labelled:
 29. **The effects mirror each other.** With only two batsmen in the pool, one batter's
     relative strength is the other's relative weakness. This shows how they differ
     from each other, not how they compare with all batsmen.
-30. **Size in a matchup.** Wicket risk per ball falls by 5% to 7% in both real
+30. **Size in a matchup.** Wicket risk per ball falls by about 7% (6.6% to 7.6%) in both real
     matchups, and runs per ball change by less than 0.5%. Calibration keeps each
     batter's overall rates over the 50/50 reference mix.
 31. **The baseline has no player adjustment**, so log5 does not cancel it.
