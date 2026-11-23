@@ -5,7 +5,7 @@ import math
 from dataclasses import dataclass
 from enum import Enum
 
-SCHEMA_VERSION = "1.1"
+SCHEMA_VERSION = "1.2"
 
 # Required runs per over at which a chase becomes medium and high pressure.
 PRESSURE_MEDIUM_RATE = 7.0

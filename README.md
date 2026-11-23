@@ -24,11 +24,18 @@ the batsman's network samples a shot, and an outcome model gives dot, 1, 2, 3, 4
 | Part | Status |
 |------|--------|
 | Data pipeline, shared types, batting networks | done |
-| Bowling networks, matchup outcome model | Turn 2 |
-| Match engine, Pygame screen, batting controls | Turn 3 |
+| Bowling networks, matchup outcome model | done |
+| Match engine, Pygame screen, batting controls | done |
 | Bowling view and controls, auto mode, menu, validation | Turn 4 |
 
-The game is not playable yet.
+Human batting is playable:
+
+```sh
+.venv/bin/python -m duel.game --matchup tendulkar-bumrah
+.venv/bin/python -m duel.game --matchup kohli-warne
+```
+
+Press `1` to `8` to choose a shot.
 
 ## Setup
 

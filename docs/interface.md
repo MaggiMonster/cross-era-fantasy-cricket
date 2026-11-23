@@ -1,6 +1,6 @@
 # Interface: how the batting and bowling halves connect
 
-- **Schema version:** `1.1`
+- **Schema version:** `1.2`
 - **Reference implementation:** `duel/types.py`
 - Change this file only together with `duel/types.py`, and bump `SCHEMA_VERSION`.
 
@@ -79,3 +79,25 @@ shot = duel.batter.sample_shot(delivery, state, rng)
 outcome = duel.sample_outcome(delivery, shot, state, rng)  # Outcome
 probs = duel.outcome_probs(delivery, shot, state.pressure)  # {OutcomeType: p}
 ```
+
+## Match engine (done, `duel/engine.py`)
+
+```python
+from duel.engine import Duel
+
+game = Duel(load_matchup("kohli", "warne"), target=None, overs=3, lives=3, seed=1)
+while not game.state.is_over:
+    delivery = game.next_delivery()      # stable until the ball is played
+    result = game.play(shot=None)        # None: the batting network chooses
+```
+
+`result` is a `BallResult` with `delivery`, `shot`, `outcome`, `before` and `after`.
+`target=None` uses `default_target(batter, overs)`.
+
+## Game screen (done for human batting, `duel/game.py`)
+
+```sh
+.venv/bin/python -m duel.game --matchup kohli-warne --overs 3 --lives 3
+```
+
+Keys: `1` to `8` choose a shot, `R` replays after a duel, `Esc` quits.
