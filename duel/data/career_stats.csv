@@ -5,3 +5,9 @@ tendulkar,tests,average,53.78,2013-11-15,https://en.wikipedia.org/wiki/Sachin_Te
 kohli,tests,matches,123,2026-11-04,https://en.wikipedia.org/wiki/Virat_Kohli
 kohli,tests,runs,9230,2026-11-04,https://en.wikipedia.org/wiki/Virat_Kohli
 kohli,tests,average,46.85,2026-11-04,https://en.wikipedia.org/wiki/Virat_Kohli
+bumrah,tests,matches,52,2026-10-05,https://en.wikipedia.org/wiki/Jasprit_Bumrah
+bumrah,tests,wickets,234,2026-10-05,https://en.wikipedia.org/wiki/Jasprit_Bumrah
+bumrah,tests,bowling_average,19.79,2026-10-05,https://en.wikipedia.org/wiki/Jasprit_Bumrah
+warne,tests,matches,145,2008-03-29,https://en.wikipedia.org/wiki/Shane_Warne
+warne,tests,wickets,708,2008-03-29,https://en.wikipedia.org/wiki/Shane_Warne
+warne,tests,bowling_average,25.41,2008-03-29,https://en.wikipedia.org/wiki/Shane_Warne

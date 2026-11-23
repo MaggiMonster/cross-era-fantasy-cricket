@@ -8,7 +8,8 @@ Everything here except this file is git-ignored. Rebuild it from the repo root:
 
 This downloads the Test and IPL archives to `data/cricsheet/`, writes the four
 players' balls to `data/cricsheet/balls.csv.gz`, and refreshes the committed
-aggregate `duel/data/batting_counts.json`.
+aggregates `duel/data/batting_counts.json` and `duel/data/bowling_counts.json`.
+The bowling file also holds outcome counts for all balls, used as the baseline.
 
 ## Credit
 
