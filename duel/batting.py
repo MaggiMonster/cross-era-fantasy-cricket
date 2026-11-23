@@ -10,6 +10,7 @@ from pgmpy.models import DiscreteBayesianNetwork
 
 from duel.career import load_career_stats
 from duel.cricsheet import BATTERS, BATTING_COUNTS
+from duel.pace_spin import outcome_multipliers
 from duel.types import (
     BowlType,
     Delivery,
@@ -166,8 +167,16 @@ def _shot_table(aggression: float) -> np.ndarray:
     return table
 
 
-def _outcome_table(shot_table: np.ndarray, rates: dict[Pressure, np.ndarray]) -> np.ndarray:
-    """P(Outcome | Pressure, Shot, BowlType, Length), calibrated to the observed rates."""
+def _outcome_table(
+    shot_table: np.ndarray,
+    rates: dict[Pressure, np.ndarray],
+    bowl_multipliers: np.ndarray | None = None,
+) -> np.ndarray:
+    """P(Outcome | Pressure, Shot, BowlType, Length), calibrated to the observed rates.
+
+    `bowl_multipliers` (BowlType, Outcome) is a batter's own pace-vs-spin effect. The
+    population baseline leaves it out, so log5 keeps it in a matchup.
+    """
     effect = np.ones((len(SHOTS), len(BOWL_TYPES), len(LENGTHS), len(OUTCOMES)))
     for s, shot in enumerate(SHOTS):
         for b, bowl in enumerate(BOWL_TYPES):
@@ -177,6 +186,8 @@ def _outcome_table(shot_table: np.ndarray, rates: dict[Pressure, np.ndarray]) ->
                     * np.array(BOWL_EFFECT[bowl])
                     * np.array(LENGTH_EFFECT[length])
                 )[EFFECT_COLUMN]
+                if bowl_multipliers is not None:
+                    effect[s, b, l] *= bowl_multipliers[b]
 
     table = np.zeros((len(PRESSURES), *effect.shape))
     for i, pressure in enumerate(PRESSURES):
@@ -274,5 +285,5 @@ def load_batter(player: str) -> BattingNetwork:
     counts = json.loads(BATTING_COUNTS.read_text())["players"]
     rates = observed_rates(player, counts, load_career_stats())
     shots = _shot_table(_aggression(player, counts))
-    outcomes = _outcome_table(shots, rates)
+    outcomes = _outcome_table(shots, rates, outcome_multipliers(player, BOWL_TYPES, OUTCOMES))
     return BattingNetwork(player, _build_model(shots, outcomes), shots, outcomes)

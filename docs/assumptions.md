@@ -36,9 +36,9 @@ Every modelling choice that is not read directly from data. Numbers marked
 12. **Calibration.** Outcome tables are scaled so that, over a **prior** reference
     delivery mix (`REFERENCE_*`), they reproduce the player's observed rates at each
     pressure. Against a real bowler's mix, rates will differ by design.
-13. **Pace vs spin is not learned.** Cricsheet does not label bowling type, so
-    batter differences against pace and spin are not measured. The effect is the
-    same **prior** for both batsmen.
+13. **Pace vs spin has two layers.** `SHOT_BY_BOWL` and `BOWL_EFFECT` are a shared
+    **prior**. Each batter's own difference is measured, as described in the section
+    "Pace vs spin adjustment".
 14. **Lives do not change behaviour.** Only the required rate sets pressure.
 
 ## Combining batter and bowler
@@ -63,8 +63,8 @@ baseline, and each player's deviation from average carries through.
     more). Dividing by a delivery-specific baseline stops those effects being
     counted twice.
 17. **Independence.** Log5 assumes batter and bowler deviations combine without
-    interaction. A specific batter's weakness against a specific bowling style is
-    not modelled.
+    interaction. A batter's general record against a bowling type is modelled (see
+    "Pace vs spin adjustment"), but any effect specific to one bowler is not.
 18. **Only two matchups are allowed:** Tendulkar vs Bumrah and Kohli vs Warne.
 
 ## Bowling network
@@ -88,3 +88,56 @@ baseline, and each player's deviation from average carries through.
     and Bumrah 363 to 767. Neither bowler's wicket rate rises smoothly with pressure.
     For example, Warne's medium-pressure rate is above his low-pressure rate, and
     Bumrah's is below. This is kept rather than forced into a pattern.
+
+## Pace vs spin adjustment
+
+Code: `duel/pace_spin.py`. Rebuild the counts with `python -m duel.pace_spin`.
+
+Batting average (runs per dismissal, run-outs excluded) on the Cricsheet balls whose
+bowler is labelled:
+
+| Batter | Format | Pace | Finger spin | Wrist spin |
+|--------|--------|------|-------------|------------|
+| Tendulkar | Tests | 51.8 | 52.3 | 78.8 (6 outs) |
+| Tendulkar | IPL | 38.9 | 40.5 | 39.2 (5 outs) |
+| Kohli | Tests | 43.3 | 52.7 | 81.2 (10 outs) |
+| Kohli | IPL | 36.2 | 62.6 | 53.6 (23 outs) |
+
+25. **Bowler labels.** `duel/data/bowler_types.csv` labels 294 bowlers as pace, finger
+    spin or wrist spin, covering 95.4% of Tendulkar's and 94.0% of Kohli's Cricsheet
+    balls. Labels were hand-entered from general cricket knowledge and **have not been
+    checked one by one** against a reference. Bowlers with a mixed or unclear style
+    (for example Andrew Symonds) are left out.
+26. **Leg-spin estimate.** Warne is the only spinner in the game, so a batter's spin
+    rate is their wrist-spin record, backed by 500 pseudo-balls of their all-spin
+    rate (**prior**), because the wrist-spin samples are small.
+27. **Relative effect.** For wickets and boundaries, the spin-to-pace log ratio is
+    computed by format, shrunk by events / (events + 20) (**prior**), weighted 50/50
+    Tests and IPL, and compared with the two batsmen pooled. The shared difference
+    between pace and spin stays in the prior tables.
+28. **Result.** Tendulkar: wicket odds x0.92 against pace and x1.09 against spin.
+    Kohli: x1.09 against pace and x0.92 against spin. Boundary odds move by under 2%.
+    Multipliers are capped at x1.5 either way.
+29. **The effects mirror each other.** With only two batsmen in the pool, one batter's
+    relative strength is the other's relative weakness. This shows how they differ
+    from each other, not how they compare with all batsmen.
+30. **Size in a matchup.** Wicket risk per ball falls by 5% to 7% in both real
+    matchups, and runs per ball change by less than 0.5%. Calibration keeps each
+    batter's overall rates over the 50/50 reference mix.
+31. **The baseline has no player adjustment**, so log5 does not cancel it.
+32. **Era is not modelled.** The counts pool each batter's Cricsheet career. Tendulkar's
+    data starts in 2001, and Kohli's form changed after 2020.
+33. **Published check.** Sidharth Monga, ESPN, 8 January 2025,
+    <https://www.espn.co.uk/cricket/story/_/id/43330624/virat-kohli-weakness-stump>:
+    Kohli averaged 62 from 2015 to 2019 and 14 since 2020 against length and
+    short-of-length balls at third and fourth stump. This supports a vulnerability to
+    seam outside off, but is not used as a model input. Other published pace/spin
+    splits we found could not be opened and checked, so none are cited.
+
+## Match engine
+
+34. **Default target** is one more than the batter's IPL runs per ball times the balls
+    available, rounded down: 22 for Tendulkar and 25 for Kohli over 3 overs.
+35. **A wicket costs one life.** The batter's score carries on and the ball counts.
+36. **The human sees the delivery before choosing a shot**, because the game has no
+    real-time timing. Shot choice changes the outcome odds only through the model.

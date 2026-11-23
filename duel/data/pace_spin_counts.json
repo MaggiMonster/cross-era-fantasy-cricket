@@ -1,0 +1,92 @@
+{
+ "coverage": {
+  "tendulkar": 0.9536,
+  "kohli": 0.94
+ },
+ "players": {
+  "tendulkar": {
+   "tests": {
+    "pace": {
+     "balls": 7039,
+     "runs": 3783,
+     "boundaries": 539,
+     "outs": 73
+    },
+    "finger_spin": {
+     "balls": 3907,
+     "runs": 1987,
+     "boundaries": 217,
+     "outs": 38
+    },
+    "wrist_spin": {
+     "balls": 716,
+     "runs": 473,
+     "boundaries": 47,
+     "outs": 6
+    }
+   },
+   "ipl": {
+    "pace": {
+     "balls": 991,
+     "runs": 1166,
+     "boundaries": 174,
+     "outs": 30
+    },
+    "finger_spin": {
+     "balls": 366,
+     "runs": 445,
+     "boundaries": 53,
+     "outs": 11
+    },
+    "wrist_spin": {
+     "balls": 155,
+     "runs": 196,
+     "boundaries": 23,
+     "outs": 5
+    }
+   }
+  },
+  "kohli": {
+   "tests": {
+    "pace": {
+     "balls": 9508,
+     "runs": 5152,
+     "boundaries": 677,
+     "outs": 119
+    },
+    "finger_spin": {
+     "balls": 5506,
+     "runs": 3003,
+     "boundaries": 272,
+     "outs": 57
+    },
+    "wrist_spin": {
+     "balls": 1220,
+     "runs": 812,
+     "boundaries": 81,
+     "outs": 10
+    }
+   },
+   "ipl": {
+    "pace": {
+     "balls": 3600,
+     "runs": 5028,
+     "boundaries": 690,
+     "outs": 139
+    },
+    "finger_spin": {
+     "balls": 1364,
+     "runs": 1565,
+     "boundaries": 148,
+     "outs": 25
+    },
+    "wrist_spin": {
+     "balls": 924,
+     "runs": 1232,
+     "boundaries": 127,
+     "outs": 23
+    }
+   }
+  }
+ }
+}
