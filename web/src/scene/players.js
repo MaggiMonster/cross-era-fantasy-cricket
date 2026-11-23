@@ -1,6 +1,11 @@
-// Placeholder capsule players. Turns 5 and 6 replace these with rigged glTF characters
-// that keep the same small API: root, setRunUp(f), setSwing(shot, f), reset().
+// Players. Batters are rigged glTF characters when their files exist in the local assets
+// folder, otherwise capsules. Bowlers are capsules until Turn 6. The API stays small:
+// root, setRunUp(f), setSwing(shot, f), reset(), update(dt).
 import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+// Every swing clip lasts SWING.time seconds and meets the ball SWING.lead seconds in.
+export const SWING = { lead: 0.4, time: 1.0 };
 
 export const KIT = {
   tendulkar: { name: "TENDULKAR", number: 10, shirt: 0x1d4ed8, trim: 0xf59e0b, height: 1.65 },
@@ -55,7 +60,84 @@ function capsuleBody(kit) {
   return { root, head, shirt };
 }
 
-export function createBatter(id) {
+/** A rigged batter from /player-assets, or null if its files are not available. */
+async function loadRiggedBatter(id, source) {
+  const loader = new GLTFLoader();
+  let character, motion;
+  try {
+    [character, motion] = await Promise.all([
+      loader.loadAsync(`/player-assets/characters/${id}.glb`),
+      loader.loadAsync(`/player-assets/animations/${source}/${id}.glb`),
+    ]);
+  } catch {
+    return null;
+  }
+
+  const root = new THREE.Group();
+  const model = character.scene;
+  model.traverse((node) => {
+    if (node.isMesh) {
+      node.castShadow = true;
+      node.frustumCulled = false;
+    }
+  });
+  root.add(model);
+  root.position.set(0.3, 0, -8.98);
+  root.rotation.y = -Math.PI / 2;
+  root.updateMatrixWorld(true);
+
+  const chest = model.getObjectByName("chest");
+  if (chest) {
+    const print = backPrint(KIT[id]);
+    print.scale.setScalar(0.8);
+    print.position.set(0, 1.25 * (KIT[id].height / 1.75), -0.145);
+    print.rotation.y = Math.PI;
+    root.add(print);
+    root.updateMatrixWorld(true);
+    chest.attach(print);
+  }
+
+  const mixer = new THREE.AnimationMixer(model);
+  const actions = Object.fromEntries(motion.animations.map((clip) => [clip.name, mixer.clipAction(clip)]));
+  let current = null;
+  const use = (action) => {
+    if (current === action) return;
+    current?.stop();
+    current = action;
+    action.play();
+  };
+
+  return {
+    root,
+    rigged: true,
+    reset() {
+      use(actions.idle);
+      actions.idle.paused = false;
+      actions.idle.setLoop(THREE.LoopRepeat);
+      mixer.update(0);
+    },
+    setSwing(shot, f) {
+      const action = actions[shot] ?? actions.defend;
+      use(action);
+      action.paused = true;
+      action.time = Math.min(f, 1) * action.getClip().duration;
+      mixer.update(0);
+    },
+    update(dt) {
+      if (current === actions.idle) mixer.update(dt);
+    },
+  };
+}
+
+/** The rigged batter if available, otherwise the capsule. `source` picks the animation folder. */
+export async function createBatter(id, source = "scripted") {
+  const rigged = await loadRiggedBatter(id, source);
+  if (rigged) return rigged;
+  console.info(`No rigged character for ${id}, using the capsule.`);
+  return createCapsuleBatter(id);
+}
+
+function createCapsuleBatter(id) {
   const kit = KIT[id];
   const { root, head } = capsuleBody(kit);
   const helmet = new THREE.Mesh(
@@ -84,6 +166,7 @@ export function createBatter(id) {
   return {
     root,
     reset() { pivot.rotation.set(0, 0, 0.12); },
+    update() {},
     setSwing(shot, f) {
       const [from, to] = SWINGS[shot] ?? SWINGS.defend;
       const windUp = Math.min(f / 0.45, 1);

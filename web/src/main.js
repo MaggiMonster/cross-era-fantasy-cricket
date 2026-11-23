@@ -1,13 +1,14 @@
 // The 3D duel. The networks (model/duel.js) decide every ball before it is animated.
 // URL options: ?matchup=kohli-warne&seed=1&auto=1&overs=3&lives=3
 // &frames=N advances N fixed 1/60 s steps and then holds, for automated checks and screenshots.
+// &motion=scripted picks the animation source. &pose=drive:0.4 holds a close-up of one shot.
 import * as THREE from "three";
 import { Duel, Networks, mulberry32 } from "./model/duel.js";
-import { createBatter, createBowler, KIT } from "./scene/players.js";
+import { SHOTS, shotForKey } from "./controls.js";
+import { createBatter, createBowler, KIT, SWING } from "./scene/players.js";
 import { buildStadium } from "./scene/stadium.js";
 import { deliveryPath, placeholderHit, sampleAt, BALL_RADIUS } from "./sim/ball.js";
 
-const SHOTS = ["leave", "defend", "work", "drive", "cut", "pull", "sweep", "loft"];
 const RUN_UP_SECONDS = { bumrah: 1.7, warne: 1.05 };
 const BROADCAST = { position: new THREE.Vector3(0.7, 8.6, 44), target: new THREE.Vector3(0, -0.9, 2.5), fov: 21 };
 const LABEL = { outside_off: "outside off", stumps: "on the stumps", leg: "down leg", run_out: "run out" };
@@ -48,7 +49,7 @@ async function start() {
   camera.lookAt(look);
 
   const { striker } = buildStadium(scene);
-  const batter = createBatter(batterId);
+  const batter = await createBatter(batterId, params.get("motion") ?? "scripted");
   const bowler = createBowler(bowlerId);
   scene.add(batter.root, bowler.root);
   const ball = new THREE.Mesh(
@@ -140,6 +141,7 @@ async function start() {
 
   function update(dt) {
     clock += dt;
+    batter.update(dt);
     if (phase === "await" && auto && clock > 0.35) playBall(null);
     if (phase === "runup") {
       const f = Math.min(clock / RUN_UP_SECONDS[bowlerId], 1);
@@ -150,8 +152,8 @@ async function start() {
       const { path, result } = ballView;
       bowler.followThrough(Math.min(clock / 0.8, 1));
       placeBall(sampleAt(path.points, clock));
-      const swingStart = path.crease.t - 0.26;
-      if (clock > swingStart) batter.setSwing(result.shot, Math.min((clock - swingStart) / 0.42, 1));
+      const swingStart = path.crease.t - SWING.lead;
+      if (clock > swingStart) batter.setSwing(result.shot, Math.min((clock - swingStart) / SWING.time, 1));
       if (clock >= path.crease.t) {
         ballView.hit = placeholderHit(path.crease, result.shot, result.outcome);
         showResult();
@@ -162,12 +164,12 @@ async function start() {
       const { path, result } = ballView;
       const t = path.crease.t + clock;
       placeBall(sampleAt(path.points, t));
-      batter.setSwing(result.shot, Math.min((t - path.crease.t + 0.26) / 0.42, 1));
+      batter.setSwing(result.shot, Math.min((t - path.crease.t + SWING.lead) / SWING.time, 1));
       if (result.outcome === "stumped") striker.knock(Math.min(clock / 0.3, 1));
       if (clock > 1.25) finishBall();
     } else if (phase === "hit") {
       const { hit, result } = ballView;
-      batter.setSwing(result.shot, Math.min((clock + 0.26) / 0.42, 1));
+      batter.setSwing(result.shot, Math.min((clock + SWING.lead) / SWING.time, 1));
       placeBall(sampleAt(hit, clock));
       const end = hit[hit.length - 1].t;
       if (result.outcome === "bowled" || result.outcome === "run_out") striker.knock(Math.min(Math.max(clock - (result.outcome === "bowled" ? end : 0.5), 0) / 0.32, 1));
@@ -199,8 +201,11 @@ async function start() {
     buttons.appendChild(button);
   });
   addEventListener("keydown", (event) => {
-    const n = Number(event.key);
-    if (n >= 1 && n <= 8) playBall(SHOTS[n - 1]);
+    const chosen = shotForKey(event.key, event.shiftKey);
+    if (chosen) {
+      event.preventDefault();
+      playBall(chosen);
+    }
     if (event.code === "Space") { event.preventDefault(); playBall(null); }
     if (event.key.toLowerCase() === "r" && phase === "over") newDuel();
   });
@@ -214,6 +219,21 @@ async function start() {
 
   const fixedFrames = params.has("frames") ? Number(params.get("frames")) : null;
   for (let i = 0; fixedFrames !== null && i < fixedFrames && phase !== "over"; i++) update(1 / 60);
+
+  // Close-up for reviewing one shot, seen from the off side.
+  const held = params.get("pose")?.split(":");
+  if (held) {
+    batter.setSwing(held[0], Number(held[1] ?? SWING.lead));
+    camera.fov = 30;
+    camera.position.set(-5.2, 1.25, -8.2);
+    camera.lookAt(0.2, 0.92, -8.85);
+    camera.updateProjectionMatrix();
+    document.querySelectorAll("#board,#matchups,#bottom").forEach((el) => { el.hidden = true; el.style.display = "none"; });
+    renderer.setAnimationLoop(() => renderer.render(scene, camera));
+    window.__ready = true;
+    return;
+  }
+  window.__ready = true;
 
   const timer = new THREE.Timer();
   renderer.setAnimationLoop((time) => {
