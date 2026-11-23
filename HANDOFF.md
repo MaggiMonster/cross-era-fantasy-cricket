@@ -3,7 +3,7 @@
 ## Whose turn is it?
 
 **Current turn: Turn 6 - Jaivin** (folder `~/cricket-project/project-friend`), still open.
-Everything is built except the Bumrah and Warne photos, which Jaivin is downloading, and the faces.
+Everything is built except the faces. Photos for all four players are ready.
 
 The plan changed on 2026-11-23 to a 3D browser game in Three.js. The Bayesian networks,
 match engine and Pygame game stay as a working fallback. The older video-generation
@@ -16,7 +16,7 @@ handoff is in `archive/docs/HANDOFF-old-scope.md`.
 | 3 | Apurva | Match engine, Pygame screen, batting controls, pace-vs-spin adjustment | done (2026-11-23) |
 | 4 | Jaivin | Three.js scaffold, ball physics, JS sampler, capsule players, validation, asset research | done (2026-11-23) |
 | 5 | Apurva | Character pipeline, Sachin and Kohli, eight batting shots, 3D batting controls | done (2026-11-23), faces pending |
-| 6 | Jaivin | Bumrah and Warne, bowling actions and controls, auto mode, character select | **in progress**, photos and faces pending |
+| 6 | Jaivin | Bumrah and Warne, bowling actions and controls, auto mode, character select | **in progress**, faces pending |
 | 7 | Apurva | Shot direction and distance, fielders, replays, camera cuts, final docs, demo | planned |
 
 ## Earlier turns
@@ -92,8 +92,8 @@ copyrighted match footage.
 
 ## Next: finish Turn 6 - Jaivin
 
-1. Jaivin saves 6 to 8 photos each to `~/cricket-project/assets/photos/bumrah/` and `warne/`,
-   following the checklist in `docs/asset-pipeline.md`, and logs each one in `SOURCES.md`.
+1. **Done.** Bumrah (6) and Warne (6) photos are saved and logged in `SOURCES.md`. Bumrah has one
+   angled view and Warne one near-side view, and most heads are under the 500-pixel target.
 2. With all four photo sets ready, install FaceBuilder, export one test head to `.glb`, then build
    all four inside the 15-day trial. Do not start the trial before then.
 3. Close Turn 6 and hand over to Apurva for Turn 7.
