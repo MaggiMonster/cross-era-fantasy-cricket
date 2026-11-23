@@ -17,6 +17,7 @@ import math
 import sys
 from pathlib import Path
 
+import bmesh
 import bpy
 from mathutils import Quaternion, Vector
 
@@ -35,6 +36,12 @@ bb.PLAYERS.update({
                   "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}},
     },
 })
+
+# Stylised heads, in metres for a 1.75 m player. Hairline is measured from eye height.
+HEAD_STYLES = {
+    "bumrah": {"hairline": 0.072, "volume": 0.013, "spikes": 0.007, "beard": True},
+    "warne": {"hairline": 0.066, "volume": 0.008, "spikes": 0.017, "beard": False, "brow": 0x9a7a45},
+}
 
 # Each foot contact is (frame, foot, distance run). Tracks are (frame, value) keys.
 ACTIONS = {
@@ -136,25 +143,98 @@ def add_controls(arm) -> None:
         copy.target, copy.subtarget = arm, f"foot_ik_{side}"
 
 
+def shell(head, name: str, mat, keep, push) -> None:
+    """A layer fitted to the head: the faces where keep(centre) is true, moved out by push(point)."""
+    obj = head.copy()
+    obj.data = head.data.copy()
+    obj.name = obj.data.name = name
+    bpy.context.collection.objects.link(obj)
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if not keep(f.calc_center_median())], context="FACES")
+    bm.normal_update()
+    moves = [(v, v.normal * push(v.co)) for v in bm.verts]
+    for v, move in moves:
+        v.co += move
+    bm.to_mesh(obj.data)
+    bm.free()
+    obj.data.materials.clear()
+    obj.data.materials.append(mat)
+
+
 def finish_kit(player: str, arm, head, eyes, s: float) -> None:
-    """Bare hands for bowling, plus simple hair and eyes on the replaceable head."""
-    bpy.data.materials["gloves"].node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = bb.rgb(bb.PLAYERS[player]["skin"])
-    hair = bb.material("hair", bb.PLAYERS[player]["hair"], 0.8)
+    """Bare hands, plus stylised hair, brows and eyes. These are not likenesses and use no photos."""
+    p = bb.PLAYERS[player]
+    style = HEAD_STYLES[player]
+    bpy.data.materials["gloves"].node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = bb.rgb(p["skin"])
+    hair = bb.material("hair", p["hair"], 0.8)
     white = bb.material("eye_white", 0xf4f1ea, 0.3)
     iris = bb.material("eye_iris", 0x1c120c, 0.25)
-    gear = bb.MeshBuilder(arm)
     points = [Vector(v.co) for v in head.data.vertices]
     top = max(q.z for q in points)
-    width = max(q.x for q in points) - min(q.x for q in points)
+    half = (max(q.x for q in points) - min(q.x for q in points)) / 2
     front, back = min(q.y for q in points), max(q.y for q in points)
     eye_z = eyes[0].z if eyes[0] is not None else top - 0.115 * s
-    centre = Vector((0, (front + back) / 2 + 0.012, eye_z + 0.035 * s))
-    gear.dome(centre, (width / 2 + 0.006, (back - front) / 2 + 0.002, top - centre.z + 0.012), hair, ("head",), low=0.05)
+    depth = lambda q: (q.y - front) / (back - front)  # 0 at the nose, 1 at the back of the head.
+
+    def on_scalp(q) -> bool:
+        line = eye_z + (style["hairline"] + (-0.115 - style["hairline"]) * smooth(min(depth(q) / 0.8, 1))) * s
+        beside_ear = abs(q.x) > half * 0.72 and depth(q) < 0.62 and q.z < eye_z + 0.025 * s
+        return q.z > line and not beside_ear
+
+    def tuft(q) -> float:
+        wave = math.sin(q.x * 310 + q.y * 170) * math.sin(q.y * 260 - q.z * 140)
+        rise = max(0.0, (q.z - eye_z) / (top - eye_z))
+        return (style["volume"] + style["spikes"] * abs(wave) * rise) * s
+
+    shell(head, "Hair", hair, on_scalp, tuft)
+    paint_face(head, p, style, eyes, eye_z, half, depth, s)
+
+    gear = bb.MeshBuilder(arm)
     for eye in eyes:
         if eye is not None:
             gear.dome(eye - Vector((0, 0, 0.012 * s)), (0.0125 * s,) * 3, white, ("head",), low=-0.99)
             gear.dome(eye + Vector((0, -0.0105 * s, -0.005 * s)), (0.0055 * s, 0.003 * s, 0.0055 * s), iris, ("head",), low=-0.99)
     gear.finish("Gear")
+
+
+def paint_face(head, p: dict, style: dict, eyes, eye_z: float, half: float, depth, s: float) -> None:
+    """Soft brows and beard painted into the head's vertex colours, which suits its coarse mesh."""
+    edge = lambda x: smooth(max(0.0, min(1.0, x)))
+    skin, beard, brow = bb.rgb(p["skin"]), bb.rgb(p["hair"]), bb.rgb(style.get("brow", p["hair"]))
+    colors = []
+    for v in head.data.vertices:
+        q = v.co
+        dz = (q.z - eye_z) / s
+        amount = 0.0
+        if style["beard"] and depth(q) < 0.66:
+            side = min(abs(q.x) / (half * 0.85), 1.0)
+            jaw = edge(((-0.094 + 0.062 * side ** 1.3) - dz) / 0.010)
+            moustache = edge((0.032 - abs(q.x) / s) / 0.007) * edge((dz + 0.069) / 0.003) * edge((-0.056 - dz) / 0.003)
+            lips = edge((0.027 - abs(q.x) / s) / 0.005) * edge((dz + 0.092) / 0.003) * edge((-0.069 - dz) / 0.003)
+            amount = max(jaw * (1 - lips), moustache) * 0.85 * edge((0.66 - depth(q)) / 0.08)
+        color = [a + (b - a) * amount for a, b in zip(skin, beard)]
+        for eye in eyes:
+            if eye is not None and depth(q) < 0.35:
+                across = abs(q.x - eye.x) / s
+                arch = 0.021 - 0.006 * (across / 0.026) ** 2
+                mark = edge((0.027 - across) / 0.005) * edge((0.0048 - abs(dz - arch)) / 0.0025) * 0.9
+                color = [a + (b - a) * mark for a, b in zip(color, brow)]
+        colors.extend(color[:3] + [1.0])
+    attribute = head.data.color_attributes.new("Col", "FLOAT_COLOR", "POINT")
+    attribute.data.foreach_set("color", colors)
+    head.data.color_attributes.active_color = attribute
+
+    mat = bpy.data.materials.new("head_skin")
+    mat.use_nodes = True
+    nodes = mat.node_tree.nodes
+    shader = nodes["Principled BSDF"]
+    shader.inputs["Roughness"].default_value = 0.55
+    source = nodes.new("ShaderNodeVertexColor")
+    source.layer_name = "Col"
+    mat.node_tree.links.new(source.outputs["Color"], shader.inputs["Base Color"])
+    head.data.materials.clear()
+    head.data.materials.append(mat)
 
 
 def key_grip(arm, frame: int, spin: float) -> None:
