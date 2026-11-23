@@ -209,3 +209,16 @@ bowler is labelled:
     work and drive. Yorkers and full balls use front-foot cut and pull. This is a **prior**.
 56. **The planted foot stays still** during the swing (measured drift under 1 cm). The batter
     still resets to the stance between balls.
+
+## Bowlers and human bowling (Turn 6)
+
+57. **Bowler bodies are generic MPFB humans** shaped by a **prior** height and build. They are
+    not likenesses. Faces still need FaceBuilder.
+58. **Bowling actions are scripted keyframes**, stylised from general knowledge of each player.
+    They are not motion capture or measurements.
+59. **Release heights are set by the models' reach:** 2.08 m for Bumrah (was 2.12) and 2.11 m
+    for Warne (was 1.86). This changes only the drawn ball path, never a probability.
+60. **A human bowler replaces only the delivery sample.** Length and line are chosen by the
+    player, and the batting and outcome networks then decide the ball as usual. A human can
+    pick combinations the real bowler rarely bowled, so human-bowling results are not part of
+    the 1000-duel validation.

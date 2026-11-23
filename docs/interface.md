@@ -1,6 +1,6 @@
 # Interface: how the batting and bowling halves connect
 
-- **Schema version:** `1.7`
+- **Schema version:** `1.8`
 - **Reference implementation:** `duel/types.py`
 - Change this file only together with `duel/types.py`, and bump `SCHEMA_VERSION`.
 
@@ -129,6 +129,12 @@ Before a swing that connects, `planContact(shot, points)` steers it to the ball 
 where and when they meet (null on a capsule). `clearAim()` plays a swing that misses.
 `clipFor(shot, length)` in `web/src/shots.js` picks the front-foot or back-foot clip, and that
 clip name is what `planContact` and `setSwing` receive.
+
+`createBowler` is async and falls back to a capsule. A bowler has `root`, `reset`, `update(dt)`,
+`runUpSeconds`, `setRunUp(f)`, `followThrough(f)` and `ballPoint()` (the ball in the hand, or null
+on a capsule). In human bowling, `duel.chooseDelivery(length, line)` replaces the bowling network's
+sample and uses no random numbers. The batting and outcome networks still decide the ball.
+With no URL options the game opens on the menu. `?mode=bat|bowl|auto` picks the mode.
 
 ```sh
 cd web && npm install && npm run dev   # http://127.0.0.1:5173

@@ -164,6 +164,7 @@ The game must never know which tool made an animation:
 
 ```text
 pipeline/build_batter.py               builds the rigged batters and scripted clips
+pipeline/build_bowler.py               builds the rigged bowlers and scripted deliveries
 raw/<source>/<action>/<take>.fbx       untouched pack or tool output
 animations/<source>/<player>.glb       one clip per action on our rig
 characters/<player>.glb                body, kit, bat and rig
@@ -172,6 +173,8 @@ characters/<player>.glb                body, kit, bat and rig
 - Install the free MPFB extension once: `blender --online-mode --command extension install --sync --enable mpfb`.
 - Rebuild: `blender --background --python pipeline/build_batter.py -- tendulkar kohli`. Do not
   add `--factory-startup`, because it disables MPFB.
+- Rebuild bowlers: `blender --background --python pipeline/build_bowler.py -- bumrah warne`.
+  Delivery clips carry the whole run-up. Release is at 1.7 s (Bumrah) and 1.4 s (Warne).
 - Bodies use MPFB 2.0.18 and its `game_engine` rig, with fingers. MPFB's code is GPL. A 2025
   CGChannel article says content made with it is CC0, which we did not confirm on MPFB's own pages.
 - `<action>` is one of `idle`, `leave`, `defend`, `work`, `drive`, `cut`, `pull`, `sweep`,
@@ -188,9 +191,9 @@ Stylised from general knowledge of each player, not measured.
 
 - **Sachin (built):** compact, narrow base, low crouch, short controlled backlift.
 - **Kohli (built):** upright, wider base, high backlift, fuller follow-through.
-- **Bumrah (spec for Turn 6):** short, stuttering, jerky run-up, very front-on chest at
+- **Bumrah (built):** short, stuttering, jerky run-up, very front-on chest at
   delivery, near-straight bowling arm, late whip of the wrist.
-- **Warne (spec for Turn 6):** unhurried walk-in of a few paces, side-on load, strong
+- **Warne (built):** unhurried walk-in of a few paces, side-on load, strong
   shoulder rotation, and a big wrist and finger flick for leg-spin.
 
 ## Reference only: earlier DeepMotion plan
