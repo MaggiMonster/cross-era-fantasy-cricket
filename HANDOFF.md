@@ -68,7 +68,11 @@ copyrighted match footage.
   grip, a trigger movement, wrist and bat-face rotation, blending between clips, and a bat that
   is steered to the real ball. Watch it with `?closeup=1`.
 - MPFB is installed in Blender on this Mac. Turn 6 can reuse `pipeline/build_batter.py`.
-- Schema is now `1.6` for the player API. No shared types changed.
+- **Camera and footwork.** The normal view starts wide and pushes in over the bowler's shoulder.
+  The C key switches to the close view. Shots have front-foot and back-foot versions, and the
+  planted foot no longer slides.
+- Photo folders exist at `~/cricket-project/assets/photos/tendulkar/` and `kohli/`.
+- Schema is now `1.7` for the player API. No shared types changed.
 
 ## Next: finish Turn 5 - Apurva
 
