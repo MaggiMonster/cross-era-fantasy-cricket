@@ -100,7 +100,8 @@ copyrighted match footage.
 
 ## Blockers and open questions
 
-- **Bowling actions need a person's judgement** at real speed on the Mac.
+- **Bowler run-ups look mediocre.** Jaivin played the game on the Mac on 2026-11-23 and found the
+  running animation weak. Accepted for now. Improve it later, possibly with Mixamo generic running.
 - **Faces are placeholders** until FaceBuilder is installed. Its glTF export and Blender 5.3
   support are not yet tested. The 15-day trial covers all four heads.
 - **Shot quality still needs a person's judgement.** The blade reaches within 12 cm of the ball
