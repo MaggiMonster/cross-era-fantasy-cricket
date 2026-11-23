@@ -95,36 +95,103 @@ which will look noticeably less realistic.
 
 ## Decisions
 
-- **Motion capture (decided 2026-11-23): start with an online service, DeepMotion
-  Animate 3D**, to get working animations quickly. Apurva creates the account and uploads
-  the clips personally. Later, run the same clips through ExMR on Apurva's RTX 4060
-  (Windows, via WSL) and compare side by side.
-- **Why DeepMotion over Rokoko:** its free tier is 60 s a month against Rokoko's 30 s. All
-  ten actions need about 37 s, leaving room for reruns.
-- **Face method and clip source: still open.** See `HANDOFF.md`.
+Current decisions (2026-11-23, Turn 5):
 
-## Source-independent motion pipeline
+- **Faces: KeenTools FaceBuilder**, on its 15-day trial.
+- **No self-filming and no copyrighted match footage.**
+- **Motion: ready-made cricket packs if one is approved, otherwise scripted Blender
+  keyframes.** Mixamo may supply generic running. Nothing is bought without asking.
+- **DeepMotion and ExMR are no longer the main plan.** Their notes below are kept for
+  reference only.
 
-The game must never know which tool made an animation. Every source goes through the
-same steps and produces the same files:
+## FaceBuilder photo checklist
+
+Collect **6 to 8 photos per player before starting the trial**. KeenTools recommends 4 to
+8 from different angles. The rest of this list is our practical guidance.
+
+| # | Angle | Why |
+|---|-------|-----|
+| 1 | Front, looking at the camera | Face width, eyes, mouth |
+| 2 | Three-quarter left (about 45 degrees) | Most useful single view for 3D shape |
+| 3 | Three-quarter right (about 45 degrees) | Same, other side |
+| 4 | Left profile, or as near as available | Nose, jaw and forehead depth |
+| 5 | Right profile, or as near as available | Same, other side |
+| 6 | Slightly from below | Jaw and chin |
+| 7 | Slightly from above | Forehead and hairline |
+| 8 | Extra clear front or three-quarter | Best source for the skin texture |
+
+- **Same period:** all photos from within a few years, with the same hair and beard.
+  Suggested: Sachin about 2008-2013, Kohli 2018 onwards, Bumrah 2019 onwards, Warne about
+  2005-2010.
+- **Clear face:** no helmet, cap, sunglasses, hands, microphone or heavy shadow.
+- **Quality:** sharp eyes, soft even light, and the head at least 500 pixels tall (1000 or
+  more is better). Avoid heavy compression, filters and wide-angle close-ups.
+- **Expression:** neutral or a closed-mouth smile.
+- **Licence:** prefer Wikimedia Commons. Record each file in
+  `~/cricket-project/assets/SOURCES.md` and save it to `photos/<player>/`.
+
+**Trial terms.** KeenTools states the trial is 15 days from first launch "with no
+restrictions or limitations", that you can "export your unique model outside Blender in any
+3D supporting format", and that after it ends you can still open projects and export but
+not edit. The page does not name glTF, and we have **not yet tested a textured export** or
+confirmed support for Blender 5.3. Export one test head to `.glb` on day one. The clock
+covers all four heads, so both contributors should have photos ready first.
+
+## Animation pack options
+
+Checked 2026-11-23. **Nothing has been bought.** CGTrader listing pages and TurboSquid could
+not be opened by our tools, so items marked *search only* come from search-result text and
+must be checked on the page.
+
+| Option | Price | Licence | Actions covered (of 10) |
+|--------|-------|---------|-------------------------|
+| **CGTrader "Cricket Animations"** (best lead) | Not confirmed | CGTrader royalty-free, *not confirmed for this item* | *Search only:* batting strokes plus fast and spin bowling. Exact shots unknown |
+| Unity Asset Store "Cricket Bowling Animations Pack" (HK) | Free | Standard Unity EULA, not yet read for non-Unity use | 8 bowling clips. Fast or leg-spin not stated, 0 batting |
+| TurboSquid batter and bowler pack | $159, *search only* | Not confirmed | Not confirmed |
+| CGTrader animated hook-shot batsman | $28, *search only* | Not confirmed | Pull or hook only, at most |
+| Animium "Cricket Batting" | $1.50 plus Bronze membership | Not stated | 1 clip, partial defend |
+| ActorCore, Fab, Sketchfab | n/a | n/a | No cricket pack found |
+| Mixamo | Free, Adobe account | Royalty-free for games per Adobe's FAQ (search text). Raw files may not be redistributed | Generic running only |
+
+**Licence risk.** CGTrader's terms restrict products that can be extracted from an
+application. A browser game serves its `.glb` files to the browser, so a purchased pack is
+fine on our own machines but **should not be deployed publicly** without checking the
+licence. Our dev server already keeps these files local.
+
+## Motion pipeline
+
+The game must never know which tool made an animation:
 
 ```text
-clips/<action>/<take>.mp4              one trimmed master clip, used by every source
-raw/<source>/<action>/<take>.fbx       untouched tool output (source: deepmotion, exmr)
-animations/<source>/<action>.glb       retargeted to our one character rig
+pipeline/build_batter.py               builds the rigged batters and scripted clips
+raw/<source>/<action>/<take>.fbx       untouched pack or tool output
+animations/<source>/<player>.glb       one clip per action on our rig
+characters/<player>.glb                body, kit, bat and rig
 ```
 
-- `<action>` is one of `leave`, `defend`, `work`, `drive`, `cut`, `pull`, `sweep`, `loft`,
-  `bumrah_delivery`, `warne_delivery`.
-- Each `.glb` has one clip named after the action, the same rig, 30 fps, and root motion
-  handled the same way. Only the retargeting input differs per source.
-- Turn 5 should let the game pick a source with `?motion=deepmotion` or `?motion=exmr`.
-- **Comparison:** same master clip, same rig and camera, played side by side. Score foot
-  sliding, bat and hand position, fast-swing accuracy and jitter.
-- ExMR under WSL is **untested**. Its authors tested native Linux with about 8 GB of GPU
-  memory, which is all an RTX 4060 has. Test one clip first.
+- Rebuild: `blender --background --factory-startup --python pipeline/build_batter.py -- tendulkar kohli`.
+- `<action>` is one of `idle`, `leave`, `defend`, `work`, `drive`, `cut`, `pull`, `sweep`,
+  `loft`, `bumrah_delivery`, `warne_delivery`.
+- Swing clips are 30 fps and 1.0 s long, with bat contact at 0.4 s.
+- Pick a source with `?motion=scripted` (default). Review a pose with `?pose=drive:0.4`.
+- The `Head` mesh is separate from `Body`, so a FaceBuilder head can replace it.
 
-## DeepMotion: what to click
+## Signature touches
+
+Stylised from general knowledge of each player, not measured.
+
+- **Sachin (built):** compact, narrow base, low crouch, short controlled backlift.
+- **Kohli (built):** upright, wider base, high backlift, fuller follow-through.
+- **Bumrah (spec for Turn 6):** short, stuttering, jerky run-up, very front-on chest at
+  delivery, near-straight bowling arm, late whip of the wrist.
+- **Warne (spec for Turn 6):** unhurried walk-in of a few paces, side-on load, strong
+  shoulder rotation, and a big wrist and finger flick for leg-spin.
+
+## Reference only: earlier DeepMotion plan
+
+No longer the main plan. Keep only in case the decision changes.
+
+### DeepMotion: what to click
 
 Labels marked *(check)* could not be confirmed from DeepMotion's docs and may differ.
 

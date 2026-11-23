@@ -37,7 +37,8 @@ cd web && npm install && npm run dev
 ```
 
 Open <http://127.0.0.1:5173>. Keys `1` to `8` play a shot, and Space lets the network
-choose. Players are placeholder capsules until Turns 5 and 6.
+choose. Batters are rigged characters when their local asset files exist, otherwise capsules.
+Bowlers are capsules until Turn 6.
 
 The 2D fallback:
 
