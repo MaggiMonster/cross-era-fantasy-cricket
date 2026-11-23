@@ -28,6 +28,8 @@ CONTACT_FRAME = 12
 LAST_FRAME = 30
 REFERENCE_HEIGHT = 1.75
 SHOTS = ("leave", "defend", "work", "drive", "cut", "pull", "sweep", "loft")
+VARIANTS = ("defend_back", "work_back", "drive_back", "cut_front", "pull_front")
+BACK_FOOT_CLIPS = {"cut", "pull", "defend_back", "work_back", "drive_back"}  # Same list as web/src/shots.js.
 
 PLAYERS = {
     "tendulkar": {
@@ -569,7 +571,54 @@ def shot_keys(shot: str, p: dict) -> dict[int, dict]:
         end = {**through, "yaw": 56.0, "chest": 32.0, "lean": 0.0, "grip": (0.12, -0.06, 1.60), "bat": (-0.72, 0.10, 0.70), "face": (-0.6, -0.5, -0.6)}
         high = backlift(p, grip=(-0.18, -0.13, 1.22), bat=(-0.72, -0.02, 0.72))
         return timeline(p, high, hit, through, end, down=0.6)
+    if shot == "defend_back":
+        hit = {**base, "hips": (-0.10, -0.03, -0.07), "yaw": 18.0, "lean": 10.0, "chest": 6.0, "back": (-0.30, -0.06, 0.0, -12.0),
+               "grip": (0.12, -0.29, 1.03), "bat": (-0.24, -0.03, -1.0), "face": (1.0, 0.0, -0.14)}
+        short = backlift(p, grip=(-0.05, -0.20, 1.12), bat=(-0.55, -0.03, 0.15), face=(0.6, -0.8, 0.0))
+        return {0: base, 3: trigger(p), 8: short, 10: mix(short, hit, 0.6), CONTACT_FRAME: hit, 18: hit,
+                LAST_FRAME: {**hit, "grip": (0.10, -0.29, 1.04)}}
+    if shot == "work_back":
+        hit = {**base, "hips": (-0.08, 0.0, -0.07), "yaw": 40.0, "lean": 10.0, "chest": 24.0, "back": (-0.28, 0.02, 0.0, 14.0),
+               "grip": (0.10, -0.16, 1.02), "bat": (0.05, 0.58, -0.81), "face": (0.65, 0.72, 0.1)}
+        through = {**hit, "yaw": 48.0, "chest": 30.0, "grip": (0.04, -0.02, 1.10), "bat": (-0.28, 0.82, -0.50), "face": (0.0, 0.6, 0.8)}
+        end = {**through, "grip": (-0.02, 0.02, 1.16), "bat": (-0.48, 0.80, -0.20), "face": (-0.2, 0.3, 0.9)}
+        return timeline(p, up, hit, through, end)
+    if shot == "drive_back":
+        hit = {**base, "hips": (-0.06, -0.03, -0.06), "yaw": 20.0, "lean": 12.0, "chest": 8.0, "back": (-0.27, -0.05, 0.0, -8.0),
+               "grip": (0.24, -0.33, 1.10), "bat": (0.16, -0.14, -1.0), "face": (1.0, -0.2, 0.05)}
+        through = {**hit, "yaw": 28.0, "chest": 14.0, "grip": (0.40, -0.30, 1.38), "bat": (0.70, -0.25, 0.60), "face": (0.55, -0.1, -0.8)}
+        end = {**through, "yaw": 38.0, "chest": 22.0, "grip": (0.20, -0.18, 1.52), "bat": (-0.40, 0.20, 0.88), "face": (-0.6, -0.7, -0.3)}
+        return timeline(p, up, hit, through, end)
+    if shot == "cut_front":
+        hit = {**base, "hips": (0.16, -0.09, -0.14), "yaw": 10.0, "lean": 24.0, "chest": 2.0, "front": (0.50, -0.24, 0.0, 8.0),
+               "grip": (0.32, -0.42, 0.68), "bat": (0.30, -0.78, -0.56), "face": (0.78, 0.12, 0.6)}
+        through = {**hit, "yaw": 2.0, "grip": (0.18, -0.48, 0.88), "bat": (-0.32, -0.88, -0.12), "face": (0.35, -0.2, 0.9)}
+        end = {**through, "yaw": -8.0, "chest": -6.0, "grip": (0.04, -0.46, 1.10), "bat": (-0.82, -0.44, 0.12), "face": (-0.2, -0.3, 0.92)}
+        return timeline(p, up, hit, through, end)
+    if shot == "pull_front":
+        hit = {**base, "hips": (0.14, 0.02, -0.12), "yaw": 34.0, "lean": 16.0, "chest": 20.0, "front": (0.46, 0.06, 0.0, 30.0),
+               "grip": (0.32, -0.14, 0.72), "bat": (0.46, 0.66, -0.60), "face": (0.68, -0.68, -0.2)}
+        through = {**hit, "yaw": 56.0, "chest": 30.0, "grip": (0.14, 0.16, 1.06), "bat": (-0.30, 0.92, 0.08), "face": (0.45, 0.35, -0.82)}
+        end = {**through, "yaw": 68.0, "chest": 36.0, "grip": (-0.04, 0.10, 1.22), "bat": (-0.78, 0.32, 0.44), "face": (-0.25, 0.2, -0.95)}
+        return timeline(p, up, hit, through, end)
     raise ValueError(shot)
+
+
+def footwork(clip: str, keys: dict[int, dict]) -> dict[int, dict]:
+    """Keep the planted foot still after the trigger, and lift the striding foot as it moves."""
+    planted, stride = ("front", "back") if clip in BACK_FOOT_CLIPS else ("back", "front")
+    x, y, _, _ = keys[3][planted]
+    out = {}
+    for frame, pose in keys.items():
+        pose = dict(pose)
+        if frame >= 3:
+            pose[planted] = (x, y, 0.0, pose[planted][3])
+        lift = {8: 0.035, 10: 0.06}.get(frame, 0.0)
+        if lift:
+            sx, sy, _, syaw = pose[stride]
+            pose[stride] = (sx, sy, lift, syaw)
+        out[frame] = pose
+    return out
 
 
 def key_fingers(arm, frame: int) -> None:
@@ -672,8 +721,8 @@ def build(player: str) -> None:
     build_gear(arm, head, eyes, s)
     ankles = {side: arm.data.bones[f"foot_{side}"].head_local.copy() for side in "lr"}
     make_clip(arm, "idle", idle_keys(p), s, ankles)
-    for shot in SHOTS:
-        make_clip(arm, shot, shot_keys(shot, p), s, ankles)
+    for clip in (*SHOTS, *VARIANTS):
+        make_clip(arm, clip, footwork(clip, shot_keys(clip, p)), s, ankles)
     scene = bpy.context.scene
     scene.frame_start, scene.frame_end = 0, LAST_FRAME
     scene.frame_set(0)
