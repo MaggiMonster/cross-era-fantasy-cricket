@@ -141,3 +141,15 @@ bowler is labelled:
 35. **A wicket costs one life.** The batter's score carries on and the ball counts.
 36. **The human sees the delivery before choosing a shot**, because the game has no
     real-time timing. Shot choice changes the outcome odds only through the model.
+
+## 3D browser game
+
+37. **The JS sampler is a port, not a new model.** It samples the exported tables with
+    the same draw order and inverse-CDF rule as NumPy's `choice`. Given the same random
+    numbers, it plays identical duels (`tests/test_web_sampler.py`).
+38. **Ball physics is presentation only.** The networks decide the outcome first, then
+    the ball is animated to fit it.
+39. **Pitch distances, speeds, release points, swing, turn and bounce** in
+    `web/src/sim/ball.js` are **priors** chosen to look plausible. Bumrah is about 142
+    km/h and Warne about 81 km/h. None are measured from the players.
+40. **Direction after the bat is a placeholder** until Turn 7.

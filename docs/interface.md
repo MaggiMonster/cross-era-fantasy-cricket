@@ -1,6 +1,6 @@
 # Interface: how the batting and bowling halves connect
 
-- **Schema version:** `1.2`
+- **Schema version:** `1.3`
 - **Reference implementation:** `duel/types.py`
 - Change this file only together with `duel/types.py`, and bump `SCHEMA_VERSION`.
 
@@ -101,3 +101,30 @@ while not game.state.is_over:
 ```
 
 Keys: `1` to `8` choose a shot, `R` replays after a duel, `Esc` quits.
+
+## Browser game (Turn 4, `web/`)
+
+`python -m duel.export_web` writes every network table to `web/public/data/networks.json`.
+Tables are flat, row-major arrays, and the `axes` field lists their order. Re-run it
+whenever a network changes. `tests/test_web_sampler.py` fails if the file is stale.
+
+```js
+import { Duel, Networks, mulberry32 } from "./model/duel.js";
+
+const networks = new Networks(await (await fetch("data/networks.json")).json());
+const game = new Duel(networks, "kohli", "warne", { overs: 3, lives: 3, random: mulberry32(1) });
+while (!game.isOver) {
+  const delivery = game.nextDelivery();
+  const result = game.play(null);   // or a shot name; null lets the network choose
+}
+```
+
+`web/src/sim/ball.js` turns a delivery into a 3D path. It is presentation only and has
+its own random generator, so it cannot change a result. Characters replace the capsules
+in `web/src/scene/players.js` by keeping `root`, `reset`, `setSwing` and `setRunUp`.
+
+```sh
+cd web && npm install && npm run dev   # http://127.0.0.1:5173
+```
+
+URL options: `?matchup=kohli-warne&seed=1&auto=1&overs=3&lives=3`.

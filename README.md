@@ -1,7 +1,8 @@
 # Cross-Era Cricket Duel
 
-A 2D cricket game where famous batsmen and bowlers are modelled as Bayesian
-networks learned from real data, then played against each other.
+A 3D browser cricket game where famous batsmen and bowlers are modelled as Bayesian
+networks learned from real data, then played against each other. The original 2D
+Pygame version stays as a working fallback.
 
 University project by Apurva Verma (MaggiMonster) and Jaivin (JaivinB).
 
@@ -21,21 +22,29 @@ the batsman's network samples a shot, and an outcome model gives dot, 1, 2, 3, 4
 
 ## Status
 
-| Part | Status |
-|------|--------|
-| Data pipeline, shared types, batting networks | done |
-| Bowling networks, matchup outcome model | done |
-| Match engine, Pygame screen, batting controls | done |
-| Bowling view and controls, auto mode, menu, validation | Turn 4 |
+| Turn | Who | Part | Status |
+|------|-----|------|--------|
+| 1-3 | Both | Data, networks, outcome model, match engine, Pygame game | done |
+| 4 | Jaivin | Three.js stadium, ball physics, JS sampler, capsule players, validation, asset research | done |
+| 5 | Apurva | Character pipeline, Sachin and Kohli, eight batting shots, 3D batting controls | next |
+| 6 | Jaivin | Bumrah and Warne, bowling actions and controls, auto mode, character select | planned |
+| 7 | Apurva | Shot direction, fielders, replays, camera cuts, final docs, demo | planned |
 
-Human batting is playable:
+Play the 3D game (needs Node.js):
+
+```sh
+cd web && npm install && npm run dev
+```
+
+Open <http://127.0.0.1:5173>. Keys `1` to `8` play a shot, and Space lets the network
+choose. Players are placeholder capsules until Turns 5 and 6.
+
+The 2D fallback:
 
 ```sh
 .venv/bin/python -m duel.game --matchup tendulkar-bumrah
 .venv/bin/python -m duel.game --matchup kohli-warne
 ```
-
-Press `1` to `8` to choose a shot.
 
 ## Setup
 
@@ -52,6 +61,8 @@ Python 3.12 on Apple Silicon, no GPU needed. Run from the repo root:
 
 - [`docs/interface.md`](docs/interface.md) - types and network structure
 - [`docs/assumptions.md`](docs/assumptions.md) - every prior and modelling choice
+- [`docs/validation.md`](docs/validation.md) - 1000-duel results and bowler label check
+- [`docs/asset-pipeline.md`](docs/asset-pipeline.md) - motion capture and face methods, asset storage
 - [`HANDOFF.md`](HANDOFF.md) - whose turn it is
 - [`archive/`](archive/README.md) - the old video-generation scope
 
