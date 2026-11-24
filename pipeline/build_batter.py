@@ -198,6 +198,74 @@ def add_controls(arm, s: float) -> None:
             copy.target, copy.subtarget = arm, target
 
 
+def add_knee_poles(arm, forward: Vector = Vector((0, -1, 0))) -> None:
+    """Point each knee over its toes: a pole target ahead of the knee, carried by the foot control.
+
+    Without poles the leg IK bends the knees any way it likes, which looked knock-kneed.
+    The pole angle is found by bending each leg and keeping the angle whose knee points forward.
+    """
+    bpy.ops.object.select_all(action="DESELECT")
+    bpy.context.view_layer.objects.active = arm
+    arm.select_set(True)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bones = arm.data.edit_bones
+    for side in "lr":
+        knee = bones[f"calf_{side}"].head.copy()
+        ankle = bones[f"foot_{side}"].head.copy()
+        pole = bones.new(f"knee_pole_{side}")
+        pole.head = knee + forward * 0.6
+        pole.tail = pole.head + Vector((0, 0, 0.05))
+        pole.parent = bones[f"foot_ik_{side}"]
+        pole.use_deform = False
+        del ankle
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+    pose = arm.pose.bones
+    for side in "lr":
+        ik = next(c for c in pose[f"calf_{side}"].constraints if c.type == "IK")
+        ik.pole_target, ik.pole_subtarget = arm, f"knee_pole_{side}"
+        foot = pose[f"foot_ik_{side}"]
+        foot.rotation_mode = "QUATERNION"
+        rest = foot.bone.matrix_local.to_quaternion()
+        foot.location = rest.inverted() @ Vector((0, 0, 0.3))  # Raise the foot so the knee must bend.
+
+        def score(degrees: float) -> float:
+            ik.pole_angle = math.radians(degrees)
+            bpy.context.view_layer.update()
+            hip, knee, heel = (pose[f"thigh_{side}"].head, pose[f"calf_{side}"].head, pose[f"foot_{side}"].head)
+            line = heel - hip
+            bend = knee - hip - line * ((knee - hip).dot(line) / line.length_squared)
+            return bend.normalized().dot(forward) if bend.length > 1e-4 else -1.0
+
+        best = max(range(-180, 180, 10), key=score)
+        best = max((best + d for d in range(-9, 10)), key=score)
+        ik.pole_angle = math.radians(best)
+        foot.location = Vector()
+    bpy.context.view_layer.update()
+
+
+_heel_axis: dict[str, Vector] = {}
+
+
+def place_foot(arm, side: str, frame: int, ankle: Vector, yaw: float, heel: float) -> None:
+    """Key a foot control with its ankle at `ankle` when flat, turned `yaw` degrees, and the heel
+    raised `heel` degrees by rolling over the ball of the foot, which stays where it was."""
+    bones = arm.data.bones
+    rest_ankle = bones[f"foot_{side}"].head_local
+    rest_ball = bones[f"ball_{side}"].head_local
+    if side not in _heel_axis:
+        along = rest_ball - rest_ankle
+        axis = Vector((along.x, along.y, 0)).normalized().cross(Vector((0, 0, 1)))
+        if (Quaternion(axis, math.radians(10)) @ (rest_ankle - rest_ball)).z < (rest_ankle - rest_ball).z:
+            axis.negate()  # Positive angles must lift the heel.
+        _heel_axis[side] = axis
+    yaw_turn = turn(yaw)
+    roll = yaw_turn @ Quaternion(_heel_axis[side], math.radians(heel))
+    ball = ankle + yaw_turn @ (rest_ball - rest_ankle)
+    lifted = ball + roll @ (rest_ankle - rest_ball)
+    set_bone(arm.pose.bones[f"foot_ik_{side}"], frame, roll, lifted - rest_ankle)
+
+
 def dress_body(body, arm, player: str):
     """Turn the bare body into kit: smooth the clothed areas, push them out, assign colours."""
     p = PLAYERS[player]
@@ -485,6 +553,10 @@ def stance(p: dict) -> dict:
         "hips": (0.0, -0.015, -p["crouch"]), "yaw": 14.0, "lean": 16.0, "chest": 6.0,
         "front": (0.13 + 0.09 * w, -0.01, 0.0, 10.0), "back": (-0.11 - 0.09 * w, 0.02, 0.0, -6.0),
         "grip": (0.03, -0.235, 0.895), "bat": (-0.12, -0.05, -1.0), "face": (1.0, 0.0, 0.0),
+        # Degrees the heel is raised, rolling over the ball of the foot.
+        "front_heel": 0.0, "back_heel": 0.0,
+        # Metres the back knee's pole target drops, so the knee can go down towards the ground.
+        "back_knee": 0.0,
     }
 
 
@@ -560,7 +632,7 @@ def shot_keys(shot: str, p: dict) -> dict[int, dict]:
         return timeline(p, {**up, "hips": (-0.08, 0.0, -0.06)}, hit, through, end)
     if shot == "sweep":
         low = {**base, "hips": (0.14, -0.02, -0.43), "yaw": 26.0, "lean": 34.0, "chest": 12.0, "front": step(0.58, -0.09, 20.0),
-               "back": (-0.30, 0.09, 0.0, -18.0), "grip": (0.40, -0.13, 0.46), "bat": (0.62, 0.70, -0.24), "face": (0.72, -0.62, 0.3)}
+               "back": (-0.30, 0.09, 0.0, -18.0), "back_knee": 1.1, "grip": (0.40, -0.13, 0.46), "bat": (0.62, 0.70, -0.24), "face": (0.72, -0.62, 0.3)}
         through = {**low, "yaw": 40.0, "chest": 20.0, "grip": (0.30, 0.08, 0.53), "bat": (0.15, 0.96, -0.05), "face": (0.75, 0.0, -0.65)}
         end = {**low, "yaw": 50.0, "chest": 26.0, "grip": (0.20, 0.22, 0.60), "bat": (-0.20, 0.95, 0.22), "face": (0.35, 0.2, -0.9)}
         return timeline(p, {**up, "hips": (0.05, -0.01, -0.24), "front": step(0.34, -0.06, 18.0)}, low, through, end)
@@ -604,8 +676,28 @@ def shot_keys(shot: str, p: dict) -> dict[int, dict]:
     raise ValueError(shot)
 
 
+# Degrees the planted foot's heel rises at contact, through the ball and at the finish. Weight
+# moves onto the striding foot, so the planted foot rolls onto its toes. Values are priors.
+HEEL_LIFT = {
+    "leave": (8, 10, 10), "defend": (26, 30, 30), "drive": (38, 52, 60), "loft": (42, 62, 72),
+    "work": (24, 38, 45), "sweep": (62, 66, 66), "cut_front": (32, 42, 48), "pull_front": (36, 48, 55),
+    "cut": (18, 26, 30), "pull": (22, 34, 40), "defend_back": (14, 16, 16), "work_back": (18, 26, 30),
+    "drive_back": (22, 30, 34),
+}
+
+
+def heel_at(clip: str, frame: int) -> float:
+    contact, through, finish = HEEL_LIFT[clip]
+    if frame >= 23:
+        return finish
+    if frame >= 16:
+        return through
+    return {CONTACT_FRAME: contact, 10: contact * 0.4}.get(frame, 0.0)
+
+
 def footwork(clip: str, keys: dict[int, dict]) -> dict[int, dict]:
-    """Keep the planted foot still after the trigger, and lift the striding foot as it moves."""
+    """Keep the planted foot still after the trigger, lift the striding foot as it moves, and roll
+    the planted foot onto its toes as the weight goes through the shot."""
     planted, stride = ("front", "back") if clip in BACK_FOOT_CLIPS else ("back", "front")
     x, y, _, _ = keys[3][planted]
     out = {}
@@ -613,6 +705,7 @@ def footwork(clip: str, keys: dict[int, dict]) -> dict[int, dict]:
         pose = dict(pose)
         if frame >= 3:
             pose[planted] = (x, y, 0.0, pose[planted][3])
+            pose[f"{planted}_heel"] = heel_at(clip, frame)
         lift = {8: 0.035, 10: 0.06}.get(frame, 0.0)
         if lift:
             sx, sy, _, syaw = pose[stride]
@@ -647,8 +740,8 @@ def key_pose(arm, frame: int, pose: dict, s: float, ankles: dict[str, Vector]) -
     set_bone(bones["head"], frame, turn(look * 0.62, -pose["lean"] * 0.48))
     for side, key in (("l", "front"), ("r", "back")):
         x, y, z, foot_yaw = pose[key]
-        target = Vector((x * s, y * s, ankles[side].z + z))
-        set_bone(bones[f"foot_ik_{side}"], frame, turn(foot_yaw), target - ankles[side])
+        place_foot(arm, side, frame, Vector((x * s, y * s, ankles[side].z + z)), foot_yaw, pose[f"{key}_heel"])
+    set_bone(bones["knee_pole_r"], frame, None, Vector((0, 0, -pose["back_knee"])))
     set_bone(bones["bat"], frame, bat_rotation(pose["bat"], pose["face"]), (Vector(pose["grip"]) - GRIP) * s)
 
 
@@ -676,6 +769,8 @@ def fit_grip(arm, frame: int) -> None:
 
 
 def make_clip(arm, name: str, keys: dict[int, dict], s: float, ankles) -> bpy.types.Action:
+    for pb in arm.pose.bones:  # Start every clip from rest, so no pose leaks from the last one.
+        pb.location, pb.rotation_quaternion = Vector(), Quaternion()
     arm.animation_data_create()
     arm.animation_data.action = None
     _last_rotation.clear()
@@ -717,6 +812,7 @@ def build(player: str) -> None:
     s = p["height"] / REFERENCE_HEIGHT
     body, arm, eyes = make_human(player)
     add_controls(arm, s)
+    add_knee_poles(arm)
     head = dress_body(body, arm, player)
     build_gear(arm, head, eyes, s)
     ankles = {side: arm.data.bones[f"foot_{side}"].head_local.copy() for side in "lr"}
