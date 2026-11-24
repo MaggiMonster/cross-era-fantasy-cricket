@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { BALL_RADIUS, POPPING_Z } from "../src/sim/ball.js";
 import { mulberry32 as mulberry32Free } from "../src/model/duel.js";
-import { BOUNDARY, FIELDS, FIELDER_SPEED, REACT, SECTORS, fielderStates, liveCut, planHit, replayCut, replayEnd, ropeDistance, wantsReplay } from "../src/sim/hit.js";
+import { BOUNDARY, FIELD_CLIP, FIELDS, FIELDER_SPEED, REACT, SECTORS, fielderStates, heldBy, liveCut, planHit, replayCut, replayEnd, ropeDistance, wantsReplay } from "../src/sim/hit.js";
 
 const from = { x: 0.1, y: 0.6, z: POPPING_Z };
 const SHOTS = ["defend", "work", "drive", "cut", "pull", "sweep", "loft"];
@@ -67,11 +67,43 @@ test("a catch ends in a fielder's hands, and they can get there in time", () => 
   for (const { hit, delivery } of cases("caught")) {
     const end = hit.points.at(-1);
     const f = FIELDS[delivery.bowl_type][hit.fielder];
-    assert.ok(Math.hypot(end.x - hit.target.x, end.z - hit.target.z) < 1e-6);
-    assert.ok(hit.arriveT <= hit.end, `${f.name} arrives late`);
+    assert.ok(Math.hypot(end.x - hit.hands.x, end.z - hit.hands.z) < 1e-6);
+    const runs = Math.hypot(hit.target.x - f.x, hit.target.z - f.z) > 0.01;
+    if (runs) assert.ok(hit.arriveT <= hit.end - FIELD_CLIP.catchReach, `${f.name} arrives late`);
     const state = fielderStates(hit, FIELDS[delivery.bowl_type], hit.end, end)[hit.fielder];
-    assert.ok(Math.hypot(state.x - end.x, state.z - end.z) < 0.01);
+    const gap = Math.hypot(state.x - end.x, state.z - end.z);
+    assert.ok(Math.abs(gap - 0.45) < 0.01, `hands should be just in front of the body, got ${gap}`);
+    assert.equal(state.clip, "catch");
+    assert.ok(Math.abs(state.clipTime - FIELD_CLIP.catchReach) < 1e-9, "the hands meet the ball on the clip's reach frame");
+    assert.equal(heldBy(hit, hit.end), "both");
   }
+});
+
+test("a fielder stops just short of the ball, picks it up and throws from his hand", () => {
+  for (const { hit, delivery } of cases("2", 3)) {
+    const field = FIELDS[delivery.bowl_type];
+    const stop = hit.points[60];
+    const at = fielderStates(hit, field, hit.throwAt, stop)[hit.fielder];
+    assert.ok(Math.hypot(at.x - stop.x, at.z - stop.z) <= 0.56, "the ball should be within reach");
+    assert.equal(at.clip, "field");
+    assert.ok(Math.abs(at.clipTime - FIELD_CLIP.pickup) < 1e-9);
+    assert.equal(heldBy(hit, hit.throwAt + 0.1), "right");
+    assert.equal(heldBy(hit, hit.releaseAt + 0.01), null);
+    const before = fielderStates(hit, field, hit.throwAt - FIELD_CLIP.pickup - 0.01, stop)[hit.fielder];
+    assert.notEqual(before.clip, "field");
+  }
+});
+
+test("running fielders play the run clip at their real speed", () => {
+  const delivery = { bowl_type: "pace", length: "good", line: "stumps" };
+  const hit = planHit({ from, shot: "drive", outcome: "3", delivery, random: mulberry32Free(5) });
+  const field = FIELDS.pace;
+  const t = (hit.arriveT + REACT) / 2;
+  const a = fielderStates(hit, field, t, from)[hit.fielder];
+  const b = fielderStates(hit, field, t + 0.1, from)[hit.fielder];
+  assert.equal(a.clip, "run");
+  assert.ok(Math.abs((b.clipTime - a.clipTime) - 0.1) < 1e-9, "7 m/s in the game is 7 m/s in the clip");
+  assert.deepEqual(fielderStates(null, field, 0).map((s) => s.clip).slice(0, 3), ["crouch", "crouch", "idle"]);
 });
 
 test("a fielded ball goes back to the stumps, and a run out breaks them when it arrives", () => {

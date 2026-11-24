@@ -80,7 +80,7 @@ async function start() {
   const batter = await createBatter(batterId, params.get("motion") ?? "scripted");
   const bowler = await createBowler(bowlerId, params.get("motion") ?? "scripted");
   scene.add(batter.root, bowler.root);
-  const fielders = createFielders(scene, networks.data.bowlers[bowlerId].bowl_type, KIT[bowlerId]);
+  const fielders = await createFielders(scene, bowlerId, networks.data.bowlers[bowlerId].bowl_type, KIT[bowlerId]);
   const ball = new THREE.Mesh(
     new THREE.SphereGeometry(BALL_RADIUS * 1.5, 18, 12),
     new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.35 }),
@@ -247,7 +247,8 @@ async function start() {
     placeBall(after >= 0 && hit ? hitPoint(hit, after) : sampleAt(path.points, t));
     const broken = hit?.stumpsAt ?? (["bowled", "stumped"].includes(result.outcome) ? 0 : null);
     if (broken !== null) striker.knock(Math.min(Math.max(after - broken, 0) / 0.3, 1));
-    fielders.pose(after >= 0 ? hit : null, Math.max(after, 0), ball.position);
+    const held = fielders.pose(after >= 0 ? hit : null, Math.max(after, 0), ball.position);
+    if (held) ball.position.copy(held);
   }
 
   function update(dt) {
@@ -379,6 +380,8 @@ async function start() {
     get phase() { return phase; },
     get hit() { return ballView?.hit ?? null; },
     get cut() { return cutId; },
+    get clock() { return clock; },
+    camera,
     step(frames) { for (let i = 0; i < frames && phase !== "over"; i++) update(1 / 60); },
   };
 

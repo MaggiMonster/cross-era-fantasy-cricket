@@ -8,8 +8,13 @@ const GRAVITY = 9.81;
 export const FIELDER_SPEED = 7; // Metres per second, a prior for a sprinting fielder.
 export const REACT = 0.25; // Seconds before a fielder starts to move.
 const THROW_SPEED = 30;
-const THROW_WINDUP = 0.3;
-const CATCH_HEIGHT = 1.5;
+// Timings of the fielder clips in pipeline/build_fielder.py, in seconds from each clip's start.
+export const FIELD_CLIP = { catchReach: 10 / 30, pickup: 6 / 30, release: 19 / 30 };
+const THROW_WINDUP = FIELD_CLIP.release - FIELD_CLIP.pickup;
+const CATCH_HEIGHT = 1.3; // Chest height, with the hands out in front.
+const HANDS_AHEAD = 0.45; // Metres from a fielder's body to the ball in his hands.
+const PICKUP_REACH = 0.55; // A fielder stops this far short of a ball he picks up.
+const RELEASE_HEIGHT = 1.8;
 const SIX_PAST_ROPE = 7.5; // Metres beyond the rope that a six lands, short of the stands.
 const STUMPS = { x: 0, y: 0.6, z: -PITCH_HALF };
 
@@ -151,10 +156,13 @@ function planCatch(from, shot, line, field, random) {
   const span = Math.hypot(f.x - from.x, f.z - from.z);
   const close = span < 10;
   const step = close ? 0 : 1 + 2 * random();
-  const target = { x: f.x + ((from.x - f.x) / span) * step, y: CATCH_HEIGHT, z: f.z + ((from.z - f.z) / span) * step };
+  // The fielder moves `step` towards the batter, and the ball meets his hands just in front of him.
+  const towards = { x: (from.x - f.x) / span, z: (from.z - f.z) / span };
+  const target = { x: f.x + towards.x * step, z: f.z + towards.z * step };
+  const hands = { x: target.x + towards.x * HANDS_AHEAD, y: CATCH_HEIGHT, z: target.z + towards.z * HANDS_AHEAD };
   const duration = close ? 0.45 : Math.min(Math.max(span / 17, 1.8), 3.6);
-  const points = airPath(from, target, duration);
-  return plan("caught", points, { fielder: index, action: "catch", target, arriveT: REACT + step / FIELDER_SPEED });
+  const points = airPath(from, hands, duration);
+  return plan("caught", points, { fielder: index, action: "catch", target, hands, arriveT: REACT + step / FIELDER_SPEED });
 }
 
 function planSix(from, shot, line, field, random) {
@@ -199,15 +207,23 @@ function planGround(from, shot, outcome, line, field, random) {
     return plan("dot", groundPath(from, d, 2.5 + 3 * random(), 8, 0), { angle });
   }
   const { index, distance } = nearestFielder(field, stop);
-  const arriveT = REACT + distance / FIELDER_SPEED;
-  const pickup = Math.max(arriveT, stop.t);
-  const hold = { ...stop, t: pickup, y: 0.9 };
-  const release = { ...hold, t: pickup + THROW_WINDUP };
-  const flight = Math.max(Math.hypot(STUMPS.x - stop.x, STUMPS.z - stop.z) / THROW_SPEED, 0.35);
+  // He stops just short of the ball, so his hands reach it, then turns and throws at the stumps.
+  const home = field[index];
+  const reach = Math.min(PICKUP_REACH, distance);
+  const target = { x: stop.x + ((home.x - stop.x) / (distance || 1)) * reach, z: stop.z + ((home.z - stop.z) / (distance || 1)) * reach };
+  const arriveT = REACT + Math.max(distance - reach, 0) / FIELDER_SPEED;
+  const pickup = Math.max(arriveT + FIELD_CLIP.pickup, stop.t);
+  const toStumps = Math.hypot(STUMPS.x - target.x, STUMPS.z - target.z) || 1;
+  const hold = { ...stop, t: pickup };
+  const release = {
+    x: target.x + ((STUMPS.x - target.x) / toStumps) * 0.4, y: RELEASE_HEIGHT,
+    z: target.z + ((STUMPS.z - target.z) / toStumps) * 0.4, t: pickup + THROW_WINDUP,
+  };
+  const flight = Math.max(Math.hypot(STUMPS.x - release.x, STUMPS.z - release.z) / THROW_SPEED, 0.35);
   const points = [...rolling, hold, release, ...airPath(release, STUMPS, flight, release.t).slice(1)];
   return plan(outcome === "run_out" ? "run_out" : "fielded", points, {
-    angle, fielder: index, action: "field", target: { x: stop.x, z: stop.z }, arriveT,
-    throwAt: pickup, stumpsAt: outcome === "run_out" ? release.t + flight : null,
+    angle, fielder: index, action: "field", target, arriveT,
+    throwAt: pickup, releaseAt: release.t, stumpsAt: outcome === "run_out" ? release.t + flight : null,
   });
 }
 
@@ -230,25 +246,66 @@ export function planHit({ from, shot, outcome, delivery, random }) {
   return planGround(start, shot, outcome, line, field, random);
 }
 
-/** Where every fielder is `after` seconds past contact. Heading is a rotation about y. */
+const BATTER = { x: 0, z: -9 };
+const headingTo = (from, to) => Math.atan2(to.x - from.x, to.z - from.z);
+function turnBetween(a, b, f) {
+  const d = Math.atan2(Math.sin(b - a), Math.cos(b - a));
+  return a + d * f;
+}
+
+/**
+ * Where every fielder is `after` seconds past contact, and which clip they play.
+ * Heading is a rotation about y. `clip` is idle, crouch, run, catch or field, with `clipTime`
+ * in seconds into it. `action` (catch or throw) is a simpler cue for the capsule fallback.
+ */
 export function fielderStates(hit, field, after, ballAt) {
+  const look = ballAt ?? BATTER;
   return field.map((home, i) => {
-    const look = ballAt ?? { x: 0, z: -9 };
-    const faceBall = Math.atan2(look.x - home.x, look.z - home.z);
+    const rest = i < 2 ? "crouch" : "idle"; // The keeper and slip crouch.
     if (!hit || hit.fielder !== i || !hit.target || after <= REACT) {
-      return { x: home.x, z: home.z, heading: faceBall, running: false, action: null };
+      return { x: home.x, z: home.z, heading: headingTo(home, look), running: false, action: null, clip: rest, clipTime: after };
     }
+    const run = Math.hypot(hit.target.x - home.x, hit.target.z - home.z);
     const span = Math.max(hit.arriveT - REACT, 1e-3);
     const clock = hit.action === "chase" ? Math.min(after, hit.end) : after;
     const f = clamp01((clock - REACT) / span);
     const x = home.x + (hit.target.x - home.x) * f;
     const z = home.z + (hit.target.z - home.z) * f;
-    const moving = f < 1 && after < hit.end && Math.hypot(hit.target.x - home.x, hit.target.z - home.z) > 0.2;
-    const heading = moving ? Math.atan2(hit.target.x - home.x, hit.target.z - home.z) : Math.atan2(look.x - x, look.z - z);
-    const throwing = hit.throwAt !== null && after >= hit.throwAt && after < hit.throwAt + THROW_WINDUP + 0.15;
-    const catching = hit.action === "catch" && after > hit.end - 0.5;
-    return { x, z, heading, running: moving, action: throwing ? "throw" : catching ? "catch" : null };
+    const at = { x, z };
+    const moving = f < 1 && run > 0.2 && (hit.action !== "chase" || after < hit.end);
+    const state = {
+      x, z, running: moving, action: null,
+      heading: moving ? headingTo(home, hit.target) : headingTo(at, look),
+      clip: moving ? "run" : rest === "crouch" && f === 0 ? "crouch" : "idle",
+      clipTime: moving ? (f * run) / FIELDER_SPEED : after,
+    };
+    if (hit.action === "catch" && after >= hit.end - FIELD_CLIP.catchReach) {
+      Object.assign(state, { clip: "catch", clipTime: after - (hit.end - FIELD_CLIP.catchReach), heading: headingTo(at, BATTER), running: false });
+      state.action = "catch";
+    } else if (hit.action === "field" && after >= hit.throwAt - FIELD_CLIP.pickup) {
+      const into = after - (hit.throwAt - FIELD_CLIP.pickup);
+      const facing = turnBetween(headingTo(home, hit.target), headingTo(at, STUMPS), clamp01((after - hit.throwAt) / 0.25));
+      Object.assign(state, { clip: "field", clipTime: into, heading: facing, running: false });
+      state.action = after >= hit.throwAt ? "throw" : null;
+    }
+    return state;
   });
+}
+
+/** The moments a fielder's hands are pulled onto the ball, as [start, full, end] seconds past contact. */
+export function handWindow(hit) {
+  if (!hit) return null;
+  if (hit.action === "catch") return [hit.end - 0.28, hit.end, hit.end + 0.3];
+  if (hit.action === "field") return [hit.throwAt - 0.15, hit.throwAt, hit.throwAt + 0.15];
+  return null;
+}
+
+/** Whether the ball is in a fielder's hands at this moment, and which hands hold it. */
+export function heldBy(hit, after) {
+  if (!hit) return null;
+  if (hit.action === "catch" && after >= hit.end) return "both";
+  if (hit.action === "field" && after >= hit.throwAt && after < hit.releaseAt) return "right";
+  return null;
 }
 
 /** Ball position `after` seconds past contact. */
