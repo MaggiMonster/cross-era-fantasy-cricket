@@ -3,14 +3,17 @@
 // &frames=N advances N fixed 1/60 s steps and then holds, for automated checks and screenshots.
 // &motion=scripted picks the animation source. &pose=drive:0.4 holds a close-up of one shot.
 // &closeup=1 starts in the close view. The C key switches views at any time.
+// &replays=0 turns off the replays after boundaries and wickets.
 import * as THREE from "three";
 import { Duel, Networks, mulberry32 } from "./model/duel.js";
 import { LENGTHS, LINES, SHOTS, bowlingKey, shotForKey } from "./controls.js";
 import { showMenu } from "./menu.js";
 import { clipFor } from "./shots.js";
+import { createFielders } from "./scene/fielders.js";
 import { createBatter, createBowler, KIT, SWING } from "./scene/players.js";
 import { buildStadium } from "./scene/stadium.js";
-import { deliveryPath, placeholderHit, sampleAt, BALL_RADIUS, BOWLERS, RELEASE_Z } from "./sim/ball.js";
+import { deliveryPath, sampleAt, BALL_RADIUS, BOWLERS, RELEASE_Z } from "./sim/ball.js";
+import { hitPoint, liveCut, planHit, replayCut, replayEnd, replayRate, wantsReplay } from "./sim/hit.js";
 
 // Each view has a wide framing before the ball and a tight one by the time it is bowled.
 const shotView = (px, py, pz, tx, ty, tz, fov) => ({ position: new THREE.Vector3(px, py, pz), target: new THREE.Vector3(tx, ty, tz), fov });
@@ -77,6 +80,7 @@ async function start() {
   const batter = await createBatter(batterId, params.get("motion") ?? "scripted");
   const bowler = await createBowler(bowlerId, params.get("motion") ?? "scripted");
   scene.add(batter.root, bowler.root);
+  const fielders = createFielders(scene, networks.data.bowlers[bowlerId].bowl_type, KIT[bowlerId]);
   const ball = new THREE.Mesh(
     new THREE.SphereGeometry(BALL_RADIUS * 1.5, 18, 12),
     new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.35 }),
@@ -91,6 +95,20 @@ async function start() {
   let phase;
   let clock = 0;
   let ballView = null;
+  let cutId = null;
+  let replayAfter = 0;
+  const replaysOn = params.get("replays") !== "0";
+
+  /** A new cut id jumps the camera. Within a cut it eases after the ball. */
+  function applyCut(shot, dt) {
+    const ease = shot.id === cutId ? 1 - Math.exp(-dt * 6) : 1;
+    if (shot.id !== cutId) cutId = shot.id;
+    camera.position.lerp(shot.position, ease);
+    look.lerp(shot.target, ease);
+    camera.fov = shot.fov;
+    camera.updateProjectionMatrix();
+    camera.lookAt(look);
+  }
 
   function newDuel() {
     const seed = seedParam === null ? (Math.random() * 2 ** 32) >>> 0 : Number(seedParam);
@@ -117,9 +135,12 @@ async function start() {
     batter.reset();
     bowler.reset();
     striker.reset();
+    fielders.pose(null, 0);
+    $("replay-tag").hidden = true;
     ball.visible = false;
     ballView = null;
     push = 0;
+    cutId = null;
     applyView();
     if (mode === "bowl") {
       showPlan();
@@ -158,6 +179,7 @@ async function start() {
   function playBall(shot) {
     if (phase !== "await") return;
     const delivery = duel.nextDelivery();
+    $("delivery").textContent = `This ball: ${delivery.bowl_type}, ${delivery.length}, ${LABEL[delivery.line]}`;
     const result = duel.play(shot);
     const jitter = { speed: (visual() - 0.5) * 1.6, length: (visual() - 0.5) * 0.4, line: (visual() - 0.5) * 0.08 };
     const path = deliveryPath(bowlerId, delivery, jitter);
@@ -181,7 +203,26 @@ async function start() {
     scoreboard();
   }
 
+  function startReplay() {
+    ballView.replayed = true;
+    replayAfter = Math.max(-0.75, 0.05 - ballView.contact.t);
+    striker.reset();
+    cutId = null;
+    $("replay-tag").hidden = false;
+    phase = "replay";
+  }
+
+  function skipReplay() {
+    if (phase !== "replay") return;
+    $("replay-tag").hidden = true;
+    finishBall();
+  }
+
   function finishBall() {
+    if (replaysOn && !ballView.replayed && wantsReplay(ballView.result)) {
+      startReplay();
+      return;
+    }
     if (duel.isOver) {
       phase = "over";
       $("banner-title").textContent = duel.batterWon ? `${KIT[batterId].name} WINS` : `${KIT[bowlerId].name} WINS`;
@@ -196,9 +237,22 @@ async function start() {
     ball.position.set(p.x, p.y, p.z);
   }
 
+  /** Pose the whole ball at `after` seconds from contact. Live play and replays share this. */
+  function poseBall(after, rewinding) {
+    const { path, result, clip, contact, hit } = ballView;
+    const t = contact.t + after;
+    bowler.followThrough(Math.min(Math.max(t, 0) / 0.8, 1));
+    const swingStart = contact.t - SWING.lead;
+    if (t > swingStart || rewinding) batter.setSwing(clip, Math.min(Math.max(t - swingStart, 0) / SWING.time, 1));
+    placeBall(after >= 0 && hit ? hitPoint(hit, after) : sampleAt(path.points, t));
+    const broken = hit?.stumpsAt ?? (["bowled", "stumped"].includes(result.outcome) ? 0 : null);
+    if (broken !== null) striker.knock(Math.min(Math.max(after - broken, 0) / 0.3, 1));
+    fielders.pose(after >= 0 ? hit : null, Math.max(after, 0), ball.position);
+  }
+
   function update(dt) {
     clock += dt;
-    batter.update(dt);
+    if (phase !== "replay") batter.update(dt);
     bowler.update(dt);
     if (phase === "await" && auto && clock > 0.35) playBall(null);
     if (phase === "runup") {
@@ -210,46 +264,45 @@ async function start() {
       if (f >= 1) { phase = "flight"; clock = 0; ball.visible = true; }
     }
     if (phase === "flight") {
-      const { path, result, clip, contact } = ballView;
-      bowler.followThrough(Math.min(clock / 0.8, 1));
-      placeBall(sampleAt(path.points, clock));
-      const swingStart = contact.t - SWING.lead;
-      if (clock > swingStart) batter.setSwing(clip, Math.min((clock - swingStart) / SWING.time, 1));
+      const { result, contact } = ballView;
       if (clock >= contact.t) {
-        ballView.hit = placeholderHit(contact, result.shot, result.outcome);
+        ballView.hit = planHit({ from: contact, shot: result.shot, outcome: result.outcome, delivery: result.delivery, random: visual });
         showResult();
         phase = ballView.hit ? "hit" : "past";
         clock = 0;
+        poseBall(0, false);
+      } else {
+        poseBall(clock - contact.t, false);
       }
     } else if (phase === "past") {
-      const { path, result, clip, contact } = ballView;
-      const t = contact.t + clock;
-      placeBall(sampleAt(path.points, t));
-      batter.setSwing(clip, Math.min((clock + SWING.lead) / SWING.time, 1));
-      if (result.outcome === "stumped" || result.outcome === "bowled") striker.knock(Math.min(clock / 0.3, 1));
+      poseBall(clock, false);
       if (clock > 1.25) finishBall();
     } else if (phase === "hit") {
-      const { hit, result, clip } = ballView;
-      batter.setSwing(clip, Math.min((clock + SWING.lead) / SWING.time, 1));
-      placeBall(sampleAt(hit, clock));
-      const end = hit[hit.length - 1].t;
-      if (result.outcome === "bowled" || result.outcome === "run_out") striker.knock(Math.min(Math.max(clock - (result.outcome === "bowled" ? end : 0.5), 0) / 0.32, 1));
-      if (hit.length > 2 && view === "normal") {
-        look.lerp(ball.position, 1 - Math.exp(-dt * 3.2));
-        camera.fov += (34 - camera.fov) * (1 - Math.exp(-dt * 2));
-        camera.updateProjectionMatrix();
-      }
-      if (clock > end + 0.95) finishBall();
+      poseBall(clock, false);
+      if (clock > ballView.hit.end + 0.95) finishBall();
+    } else if (phase === "replay") {
+      replayAfter += dt * replayRate(replayAfter);
+      poseBall(replayAfter, true);
+      if (replayAfter >= replayEnd(ballView.hit) + 0.35) skipReplay();
     }
-    const following = phase === "hit" && view === "normal" && ballView.hit.length > 2;
-    if (following) camera.lookAt(look);
-    else applyView();
+    if (phase === "replay") {
+      applyCut(replayCut(ballView.hit, replayAfter, ball.position), dt);
+      return;
+    }
+    const shot = phase === "hit" && view === "normal" ? liveCut(ballView.hit, clock, ball.position) : null;
+    if (shot) {
+      applyCut(shot, dt);
+    } else {
+      cutId = null;
+      applyView();
+    }
   }
 
   function switchView() {
     view = view === "normal" ? "close" : "normal";
     $("view").textContent = view === "normal" ? "Close view (C)" : "Normal view (C)";
-    applyView();
+    cutId = null;
+    if (phase !== "replay") applyView();
   }
 
   addEventListener("resize", () => {
@@ -287,7 +340,13 @@ async function start() {
   $("bowling").hidden = mode !== "bowl";
   $("hint").textContent = HINTS[mode];
 
+  $("replay-tag").addEventListener("click", (event) => { skipReplay(); event.currentTarget.blur(); });
   addEventListener("keydown", (event) => {
+    if (phase === "replay" && (event.code === "Space" || event.key === "Enter")) {
+      event.preventDefault();
+      if (!event.repeat) skipReplay();
+      return;
+    }
     if (mode === "bowl") {
       const action = bowlingKey(event.key);
       if (action) {
@@ -314,7 +373,14 @@ async function start() {
   }
 
   newDuel();
-  window.__duel = { get duel() { return duel; }, get phase() { return phase; } };
+  // For automated checks: read the state, and advance fixed 1/60 s steps when &frames= is set.
+  window.__duel = {
+    get duel() { return duel; },
+    get phase() { return phase; },
+    get hit() { return ballView?.hit ?? null; },
+    get cut() { return cutId; },
+    step(frames) { for (let i = 0; i < frames && phase !== "over"; i++) update(1 / 60); },
+  };
 
   const fixedFrames = params.has("frames") ? Number(params.get("frames")) : null;
   for (let i = 0; fixedFrames !== null && i < fixedFrames && phase !== "over"; i++) update(1 / 60);
