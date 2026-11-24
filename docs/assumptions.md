@@ -152,7 +152,7 @@ bowler is labelled:
 39. **Pitch distances, speeds, release points, swing, turn and bounce** in
     `web/src/sim/ball.js` are **priors** chosen to look plausible. Bumrah is about 142
     km/h and Warne about 81 km/h. None are measured from the players.
-40. **Direction after the bat is a placeholder** until Turn 7.
+40. **Direction after the bat** was a placeholder until Turn 7. See items 61 to 70.
 
 ## Tendulkar scoring-rate review (Turn 5)
 
@@ -222,3 +222,29 @@ bowler is labelled:
     player, and the batting and outcome networks then decide the ball as usual. A human can
     pick combinations the real bowler rarely bowled, so human-bowling results are not part of
     the 1000-duel validation.
+
+## Shot direction, fielders, replays and cameras (Turn 7)
+
+61. **The networks decide first, and the ball is then drawn to fit.** `web/src/sim/hit.js` uses
+    only the visual random generator, so where the ball goes can never change a result.
+62. **Each shot has an arc**, for example a cut to the off side square of the wicket and a pull to
+    leg (`SECTORS`). The line nudges it by about 10 degrees towards off or leg. These arcs are
+    **priors** from general cricket knowledge. Cricsheet does not record where the ball went.
+63. **Distance comes from the outcome.** Roughly: dot up to 14 m, 1 run 16-30 m, 2 runs 34-48 m,
+    3 runs 50-60 m, all kept at least 7 m inside the rope. These bands are **priors**.
+64. **Boundaries find a gap.** A four runs along the ground to the rope, and a six lands 7.5 m
+    beyond it. The game tries angles across the shot's arc and picks one that no fielder can
+    reach in time, widening the arc if it has to. A test checks this for every shot and line.
+65. **Fielders run at 7 m/s after a 0.25 s reaction.** Both are **priors** for a sprinting
+    fielder. A catch is held by the fielder whose position best matches the shot. Edged shots
+    (defend, drive, cut, work) are caught by the keeper or slip.
+66. **Fields are fixed per bowling type,** not per bowler or match state. Pace has a slip, deep
+    third and fine leg. Spin has a slip, deep cover and long-on. Both are **priors**.
+67. **There is only one batter on screen,** so runs are not run between the wickets. A run out is
+    shown as a throw that breaks the stumps.
+68. **Replays** are shown after every four, six and wicket, slowed to 0.3x through the contact.
+    Space, Enter or the replay button skips one, and `&replays=0` turns them off.
+69. **Camera cuts** follow the ball from behind the batter, then cut to the rope for boundaries,
+    to the catcher for catches, and to the stumps for run outs. They apply in the normal view.
+    The close view stays where it is during live play.
+70. **Fielders are simple jointed figures** in the bowler's team colour, not rigged characters.

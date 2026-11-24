@@ -1,6 +1,6 @@
 # Interface: how the batting and bowling halves connect
 
-- **Schema version:** `1.8`
+- **Schema version:** `1.9`
 - **Reference implementation:** `duel/types.py`
 - Change this file only together with `duel/types.py`, and bump `SCHEMA_VERSION`.
 
@@ -136,8 +136,17 @@ on a capsule). In human bowling, `duel.chooseDelivery(length, line)` replaces th
 sample and uses no random numbers. The batting and outcome networks still decide the ball.
 With no URL options the game opens on the menu. `?mode=bat|bowl|auto` picks the mode.
 
+After the bat, `planHit({ from, shot, outcome, delivery, random })` in `web/src/sim/hit.js` returns
+the ball's whole journey, or null when it is not hit. It has `kind` (`bowled`, `dot`, `fielded`,
+`run_out`, `caught`, `four`, `six`), timed `points`, `end`, and the chosen `fielder` with its
+`target` and `arriveT`. `throwAt` and `stumpsAt` are set when the ball is thrown in or breaks the
+stumps. `random` must be the visual generator. `fielderStates(hit, field, after)` gives every
+fielder's position at a time, so the live ball and its replay are drawn from the same plan.
+`liveCut` and `replayCut` give the camera, and a new cut id is a hard cut.
+
 ```sh
 cd web && npm install && npm run dev   # http://127.0.0.1:5173
 ```
 
-URL options: `?matchup=kohli-warne&seed=1&auto=1&overs=3&lives=3`.
+URL options: `?matchup=kohli-warne&seed=1&auto=1&overs=3&lives=3&replays=0`.
+`window.__duel.step(n)` advances n fixed steps when `&frames=` is set, for automated checks.
