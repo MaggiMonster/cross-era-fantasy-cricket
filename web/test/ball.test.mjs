@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { BOWLERS, POPPING_Z, closestToBlade, deliveryPath, placeholderHit, pointAtZ, sampleAt } from "../src/sim/ball.js";
+import { BOWLERS, POPPING_Z, closestToBlade, deliveryPath, pointAtZ, sampleAt } from "../src/sim/ball.js";
 
 const LENGTHS = ["yorker", "full", "good", "short", "bouncer"];
 const LINES = ["outside_off", "stumps", "leg"];
@@ -65,10 +65,4 @@ test("closestToBlade finds where the ball passes nearest the bat", () => {
   assert.equal(hit.ball.z, -9);
   assert.ok(Math.abs(hit.blade.y - 0.5) < 1e-9);
   assert.ok(Math.abs(hit.distance - 0.2) < 1e-9);
-});
-
-test("placeholder hit: bowled reaches the stumps, a leave is not hit", () => {
-  const from = { x: 0.2, y: 0.5, z: POPPING_Z };
-  assert.equal(placeholderHit(from, "leave", "dot"), null);
-  assert.equal(placeholderHit(from, "drive", "bowled").at(-1).z, -10.06);
 });

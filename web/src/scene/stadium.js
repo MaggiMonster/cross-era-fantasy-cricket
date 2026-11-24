@@ -1,7 +1,7 @@
 // Stadium, ground, pitch, stumps and lighting. All procedural: no external assets.
 import * as THREE from "three";
+import { BOUNDARY } from "../sim/hit.js";
 
-export const BOUNDARY = 72;
 const STAND_INNER = 84;
 
 function canvasTexture(width, height, draw) {

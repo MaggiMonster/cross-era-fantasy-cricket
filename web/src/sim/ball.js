@@ -171,37 +171,3 @@ export function closestToBlade(points, a, b, minZ = -10, maxZ = -7.4) {
   return best;
 }
 
-// Placeholder direction for each shot (radians, 0 straight back past the bowler, + leg side).
-// Turn 7 replaces this with direction and distance driven by shot plus outcome.
-const SHOT_ANGLE = { defend: 0.1, work: 1.1, drive: -0.35, cut: -1.75, pull: 1.75, sweep: 2.1, loft: 0.15, leave: 0 };
-const OUTCOME_DISTANCE = { dot: 7, 1: 26, 2: 42, 3: 56, 4: 72, 6: 88, caught: 40 };
-
-/** Placeholder path after the bat. Returns null when the ball is not hit. */
-export function placeholderHit(from, shot, outcome) {
-  if (shot === "leave" || outcome === "lbw" || outcome === "stumped") return null;
-  if (outcome === "bowled") {
-    const dt = 0.14;
-    return [{ t: 0, ...xyz(from) }, { t: dt, x: 0, y: 0.4, z: -PITCH_HALF }];
-  }
-  const distance = OUTCOME_DISTANCE[outcome] ?? 18;
-  const angle = SHOT_ANGLE[shot] ?? 0;
-  const aerial = outcome === "6" || outcome === "caught";
-  const duration = aerial ? 3 : Math.max(0.7, distance / 24);
-  const apex = aerial ? distance * 0.3 : 0.25;
-  const points = [];
-  for (let i = 0; i <= 60; i++) {
-    const f = i / 60;
-    const reach = aerial ? f : 1 - (1 - f) * (1 - f);
-    points.push({
-      t: f * duration,
-      x: from.x + Math.sin(angle) * distance * reach,
-      y: Math.max(BALL_RADIUS, from.y * (1 - f) + 4 * apex * f * (1 - f)),
-      z: from.z + Math.cos(angle) * distance * reach,
-    });
-  }
-  return points;
-}
-
-function xyz({ x, y, z }) {
-  return { x, y, z };
-}
