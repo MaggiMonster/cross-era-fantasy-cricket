@@ -47,6 +47,8 @@ HEAD_STYLES = {
 ACTIONS = {
     "bumrah": {
         "release": 51, "last": 78,
+        # Running bob until the bound: (last frame, crouch, up-and-down amplitude) in metres.
+        "bob": (39, 0.035, 0.03),
         # Short, stuttering approach: uneven steps, then a bound into a braced front leg.
         "contacts": [(0, "r", 0.0), (0, "l", 0.25), (7, "r", 1.25), (13, "l", 2.35), (18, "r", 3.05), (22, "l", 3.55),
                      (28, "r", 4.75), (34, "l", 6.0), (39, "r", 7.15), (45, "r", 8.35), (49, "l", 9.45),
@@ -68,6 +70,7 @@ ACTIONS = {
     },
     "warne": {
         "release": 42, "last": 72,
+        "bob": (27, 0.015, 0.01),
         # Unhurried walk-in of a few paces.
         "contacts": [(0, "r", 0.0), (0, "l", 0.2), (9, "r", 0.85), (18, "l", 1.6), (27, "r", 2.3), (35, "r", 2.75), (40, "l", 3.55),
                      (52, "r", 4.3), (62, "l", 4.75)],
@@ -89,6 +92,8 @@ ACTIONS = {
 
 
 def smooth(t: float) -> float:
+    """Ease from 0 to 1. Inputs outside that range are held at the ends."""
+    t = min(max(t, 0.0), 1.0)
     return t * t * (3 - 2 * t)
 
 
@@ -103,20 +108,49 @@ def track(keys, frame: float):
     return keys[-1][1]
 
 
-def foot_at(contacts, side: str, frame: float) -> tuple[float, float]:
-    """Distance along the run-up and lift of one foot: planted between contacts, arcing between them."""
+RUNNING_SPEED = 0.12  # Metres per frame (3.6 m/s): faster than this a foot runs rather than walks.
+
+
+def foot_at(contacts, side: str, frame: float) -> tuple[float, float, float]:
+    """Distance along the run-up, lift and heel angle of one foot.
+
+    A running foot is down for under a third of its cycle and rolls onto its toes. It then kicks
+    the heel up behind, swings through with the knee driving forward, and lands on its contact
+    frame. A walking foot stays down longer and lifts less. These shapes are priors.
+    """
     own = [(f, d) for f, s, d in contacts if s == side]
     if frame <= own[0][0]:
-        return own[0][1], 0.0
+        return own[0][1], 0.0, 0.0
     for (fa, da), (fb, db) in zip(own, own[1:]):
         if frame <= fb:
-            # The foot leaves late and lands on its contact frame.
-            start = fa + (fb - fa) * 0.25
+            span, stride = fb - fa, db - da
+            if stride < 0.05:
+                return da, 0.0, 0.0  # A pivot in place.
+            running = stride / span > RUNNING_SPEED
+            start = fa + span * (0.3 if running else 0.45)
             if frame <= start:
-                return da, 0.0
+                roll = smooth((frame - (start - span * 0.15)) / (span * 0.15))
+                return da, 0.0, roll * (30 if running else 18)
             t = (frame - start) / (fb - start)
-            return da + (db - da) * smooth(t), math.sin(math.pi * t) * min(0.16, 0.05 + abs(db - da) * 0.11)
-    return own[-1][1], 0.0
+            peak = min(0.36, 1.6 * stride / span)
+            forward = smooth(min(max((t - 0.12) / 0.88, 0.0), 1.0))  # The foot trails before it swings.
+            lift = peak * math.sin(math.pi * t ** 0.75)  # Highest early: the heel kick.
+            heel = (45 if running else 20) * math.sin(math.pi * min(t / 0.75, 1.0))
+            return da + stride * forward, lift, heel
+    return own[-1][1], 0.0, 0.0
+
+
+def bounce(action: dict, frame: float) -> float:
+    """Running bob: lowest just after each foot lands, highest in the flight between steps."""
+    until, depth, amp = action["bob"]
+    if until <= 0:
+        return 0.0
+    frames = sorted({f for f, _, _ in action["contacts"]})
+    before = max(f for f in frames if f <= frame)
+    after = min((f for f in frames if f > frame), default=None)
+    u = 0.0 if after is None else (frame - before) / (after - before)
+    weight = smooth(min(frame / 4, 1.0)) * (1 - smooth((frame - (until - 4)) / 4))
+    return weight * (-depth - amp * math.cos(2 * math.pi * (u - 0.1)))
 
 
 def add_controls(arm) -> None:
@@ -253,7 +287,7 @@ def key_grip(arm, frame: int, spin: float) -> None:
 
 def key_frame(arm, action: dict, frame: int, s: float, rest: dict) -> None:
     bones = arm.pose.bones
-    run, rise = track(action["pelvis"], frame), track(action["rise"], frame)
+    run, rise = track(action["pelvis"], frame), track(action["rise"], frame) + bounce(action, frame)
     yaw, chest, lean = (track(action[k], frame) for k in ("yaw", "chest", "lean"))
     bb.set_bone(bones["pelvis"], frame, bb.turn(yaw, lean * 0.4), Vector((0, -run, rise * s)))
     share = bb.turn(chest / 3, lean * 0.2)
@@ -264,13 +298,11 @@ def key_frame(arm, action: dict, frame: int, s: float, rest: dict) -> None:
     bb.set_bone(bones["head"], frame, bb.turn(look * 0.6, -lean * 0.4))
 
     for side in "lr":
-        distance, lift = foot_at(action["contacts"], side, frame)
-        ankle = rest["foot", side]
-        bb.set_bone(bones[f"foot_ik_{side}"], frame, bb.turn(0, -lift * 90), Vector((0, -distance, lift)))
+        distance, lift, heel = foot_at(action["contacts"], side, frame)
+        bb.place_foot(arm, side, frame, rest["foot", side] + Vector((0, -distance, lift)), 0.0, heel)
         across, ahead, height = track(action["right" if side == "r" else "left"], frame)
         wanted = Vector((across * s, -(run + ahead * s), rest["pelvis"] + rise * s + height * s))
         bb.set_bone(bones[f"hand_ik_{side}"], frame, None, wanted - rest["hand", side])
-        del ankle
 
     fingers, _, palm = bb.hand_frame(arm, "r")
     bb.set_bone(bones["hand_r"], frame, Quaternion(palm, math.radians(track(action["flick"], frame))) @
@@ -294,7 +326,7 @@ def make_clip(arm, name: str, action: dict, s: float, rest: dict):
 def idle_action(action: dict) -> dict:
     """Standing at the top of the mark, breathing, with the same tracks as the delivery."""
     still = {key: [(0, track(action[key], 0)), (30, track(action[key], 0))] for key in ("pelvis", "yaw", "chest", "lean", "right", "left", "flick", "spin")}
-    return {**still, "last": 30, "release": 0, "rise": [(0, 0.0), (15, -0.012), (30, 0.0)],
+    return {**still, "last": 30, "release": 0, "rise": [(0, 0.0), (15, -0.012), (30, 0.0)], "bob": (0, 0.0, 0.0),
             "contacts": [(0, "r", 0.0), (0, "l", action["contacts"][1][2])]}
 
 
@@ -313,6 +345,7 @@ def build(player: str) -> None:
     s = bb.PLAYERS[player]["height"] / bb.REFERENCE_HEIGHT
     body, arm, eyes = bb.make_human(player)
     add_controls(arm)
+    bb.add_knee_poles(arm)
     head = bb.dress_body(body, arm, player)
     finish_kit(player, arm, head, eyes, s)
     data = arm.data.bones
