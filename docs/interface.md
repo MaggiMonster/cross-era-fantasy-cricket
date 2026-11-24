@@ -143,6 +143,9 @@ the ball's whole journey, or null when it is not hit. It has `kind` (`bowled`, `
 stumps. `random` must be the visual generator. `fielderStates(hit, field, after)` gives every
 fielder's position at a time, so the live ball and its replay are drawn from the same plan.
 `liveCut` and `replayCut` give the camera, and a new cut id is a hard cut.
+`createFielders(scene, bowlerId, bowlType, kit)` in `web/src/scene/fielders.js` is async and
+falls back to simple figures. Its `pose(hit, after, ballAt)` places every fielder, plays their
+clip, pulls the hands onto the ball, and returns the ball's position while a fielder holds it.
 
 ```sh
 cd web && npm install && npm run dev   # http://127.0.0.1:5173

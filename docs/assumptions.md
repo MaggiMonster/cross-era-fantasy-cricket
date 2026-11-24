@@ -247,4 +247,26 @@ bowler is labelled:
 69. **Camera cuts** follow the ball from behind the batter, then cut to the rope for boundaries,
     to the catcher for catches, and to the stumps for run outs. They apply in the normal view.
     The close view stays where it is during live play.
-70. **Fielders are simple jointed figures** in the bowler's team colour, not rigged characters.
+70. **Fielders are generic MPFB people** in the bowler's team colours, built by
+    `pipeline/build_fielder.py`. They are not real players and use no photos. If their file is
+    missing, simple jointed figures stand in. The keeper wears white gloves.
+71. **Fielder clips are scripted keyframes**, priors from general cricket technique: a ready
+    stance, a keeper and slip crouch, a 16-frame run at 7 m/s, a two-handed catch and a scoop then
+    overarm throw. The run clip is played at the fielder's real ground speed, so feet do not slide.
+72. **Hands are pulled onto the ball at run time.** For a catch both palms close round the ball
+    in the last 0.28 s, and the ball then stays between them. For a pickup the right hand reaches
+    the ball, then carries it until the throw is released. A catch is taken 0.45 m in front of the
+    body at chest height (1.3 m), and a fielder stops 0.55 m short of a ball he picks up.
+
+## Leg technique (Turn 7)
+
+73. **Knees point over the toes.** Every leg's IK now has a pole target carried by the foot, so
+    knees no longer fold inwards. The pole angle is measured by bending each leg in Blender.
+74. **The planted foot rolls onto its toes** as weight moves through a shot, pivoting on the ball
+    of the foot so it does not slide. The heel angles per shot (`HEEL_LIFT` in
+    `pipeline/build_batter.py`) are **priors**, for example 38 degrees at contact in a drive and
+    60 at the finish. In the sweep the back knee goes down to the ground.
+75. **Run-ups now run.** A running foot (faster than 3.6 m/s) is down for under a third of its
+    cycle, rolls onto its toes, kicks the heel up behind (up to 0.36 m) and swings through with the
+    knee driving forward. The body bobs and sits lower while running. Warne's slower walk-in
+    lifts less. These shapes are **priors**. Release positions did not change.

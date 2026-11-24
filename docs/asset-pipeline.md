@@ -169,6 +169,7 @@ The game must never know which tool made an animation:
 ```text
 pipeline/build_batter.py               builds the rigged batters and scripted clips
 pipeline/build_bowler.py               builds the rigged bowlers and scripted deliveries
+pipeline/build_fielder.py              builds one generic fielder per team, with fielding clips
 raw/<source>/<action>/<take>.fbx       untouched pack or tool output
 animations/<source>/<player>.glb       one clip per action on our rig
 characters/<player>.glb                body, kit, bat and rig
@@ -179,6 +180,11 @@ characters/<player>.glb                body, kit, bat and rig
   add `--factory-startup`, because it disables MPFB.
 - Rebuild bowlers: `blender --background --python pipeline/build_bowler.py -- bumrah warne`.
   Delivery clips carry the whole run-up. Release is at 1.7 s (Bumrah) and 1.4 s (Warne).
+- Rebuild fielders: `blender --background --python pipeline/build_fielder.py -- bumrah warne`.
+  This writes `animations/scripted/fielder_<bowler>.glb` with `idle`, `crouch`, `run`, `catch`
+  and `field` clips. Their timings must match `FIELD_CLIP` in `web/src/sim/hit.js`.
+- All three scripts share `add_knee_poles` and `place_foot` in `build_batter.py`, which keep
+  knees over the toes and roll a foot over its ball. Each build takes a few seconds.
 - Bodies use MPFB 2.0.18 and its `game_engine` rig, with fingers. MPFB's code is GPL. A 2025
   CGChannel article says content made with it is CC0, which we did not confirm on MPFB's own pages.
 - `<action>` is one of `idle`, `leave`, `defend`, `work`, `drive`, `cut`, `pull`, `sweep`,

@@ -46,8 +46,8 @@ auto mode, overs and lives.
 | Any | `C` switches between the broadcast and close views. Space or Enter skips a replay. `R` plays again. |
 
 After the bat, the ball goes where the shot and the networks' outcome say: fours find a gap
-to the rope, sixes clear it, and catches go to a fielder. Nine fielders, a keeper and the
-bowler take the field. Boundaries and wickets get a slow-motion replay, and the camera cuts
+to the rope, sixes clear it, and catches go to a fielder. Nine rigged fielders, a keeper and the
+bowler take the field, catch with both hands, and pick up and throw. Boundaries and wickets get a slow-motion replay, and the camera cuts
 to follow the ball, the rope, the catcher or the stumps.
 
 Players are rigged characters when their files exist in the local assets folder
