@@ -83,6 +83,16 @@ Python 3.12 on Apple Silicon, no GPU needed. Run from the repo root:
 .venv/bin/python -m duel.cricsheet   # optional: rebuild data from Cricsheet
 ```
 
+### Reproduce the report's results
+
+```sh
+.venv/bin/python -m duel.validate    # 1000 duels per matchup, fixed seed
+```
+
+This rewrites [`docs/validation.md`](docs/validation.md), which holds the results table in the
+project report: per-ball runs, wickets, boundaries and dots for each matchup against the log5
+expectation, and the batsman's win rate. The seed is fixed, so the numbers come out the same.
+
 ## Docs
 
 - [`docs/interface.md`](docs/interface.md) - types and network structure
