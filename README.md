@@ -53,6 +53,11 @@ to follow the ball, the rope, the catcher or the stumps.
 Players are rigged characters when their files exist in the local assets folder
 (`~/cricket-project/assets/`, not in git), otherwise capsules. Faces are stylised, not likenesses.
 
+**On a fresh clone the game plays fully, with capsule players and simple fielders.** The
+networks, shots, ball paths, replays and cameras are all the same. To build the rigged
+characters too, install Blender with the free MPFB extension and run the three scripts in
+`pipeline/` (see [`docs/asset-pipeline.md`](docs/asset-pipeline.md)). Each takes a few seconds.
+
 ### How the networks drive the 3D game
 
 1. The bowling network samples a delivery, or a human picks length and line.
@@ -79,9 +84,12 @@ Python 3.12 on Apple Silicon, no GPU needed. Run from the repo root:
 ```sh
 /opt/homebrew/bin/python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-.venv/bin/python -m pytest tests -q
-.venv/bin/python -m duel.cricsheet   # optional: rebuild data from Cricsheet
+.venv/bin/python -m pytest tests -q   # all tests pass on a fresh clone
 ```
+
+The four-player Cricsheet extract (`data/cricsheet/balls.csv.gz`) is committed, so nothing
+needs downloading. `python -m duel.cricsheet` rebuilds it from the latest Cricsheet archives,
+but newer matches change some numbers. See [`data/README.md`](data/README.md) first.
 
 ### Reproduce the report's results
 

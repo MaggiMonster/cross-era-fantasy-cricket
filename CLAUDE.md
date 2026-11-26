@@ -120,4 +120,5 @@ Player kit numbers: Sachin 10, Kohli 18, Bumrah 93, Warne 23.
   - tests: `.venv/bin/python -m pytest tests -q`
   - rebuild data: `.venv/bin/python -m duel.cricsheet`
   - 3D game: `cd web && npm install && npm run dev`
-- Raw data, `outputs/` and venvs are git-ignored; never commit them.
+- Raw data, `outputs/` and venvs are git-ignored; never commit them. The one exception is the
+  filtered extract `data/cricsheet/balls.csv.gz`, committed so a fresh clone reproduces the results.
