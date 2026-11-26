@@ -27,6 +27,10 @@ checkpoints/
 # Videos and test footage
 data/*
 !data/README.md
+# The filtered four-player extract is committed so tests and results reproduce exactly.
+!data/cricsheet/
+data/cricsheet/*
+!data/cricsheet/balls.csv.gz
 *.mp4
 *.mov
 *.webm
