@@ -84,7 +84,8 @@ Python 3.12 on Apple Silicon, no GPU needed. Run from the repo root:
 ```sh
 /opt/homebrew/bin/python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-.venv/bin/python -m pytest tests -q   # all tests pass on a fresh clone
+(cd web && npm install)                # the game tests need Node.js packages
+.venv/bin/python -m pytest tests -q   # all 87 tests pass on a fresh clone
 ```
 
 The four-player Cricsheet extract (`data/cricsheet/balls.csv.gz`) is committed, so nothing
